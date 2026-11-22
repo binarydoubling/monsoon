@@ -185,7 +185,11 @@ export function atlasStyle(
         id: "sunlight",
         type: "raster",
         source: "sunlight",
-        paint: { "raster-fade-duration": 0 },
+        paint: {
+          "raster-fade-duration": 0,
+          "raster-opacity": 1,
+          "raster-opacity-transition": { duration: 0 },
+        },
       },
       ...streets.filter(overlay),
       {

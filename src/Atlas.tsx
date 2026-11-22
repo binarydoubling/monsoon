@@ -23,6 +23,29 @@ export interface AtlasProps {
   onPick: (lat: number, lon: number, name?: string) => Promise<void>;
 }
 const initial: [number, number] = [-25, 40];
+function updateNightExposure(map: maplibregl.Map) {
+  if (!map.getLayer("sunlight")) return;
+  const canvas = map.getCanvas();
+  const { left = 0, right = 0, top = 0, bottom = 0 } = map.getPadding();
+  const span = Math.min(
+    canvas.clientWidth - left - right,
+    canvas.clientHeight - top - bottom,
+  );
+  if (span <= 0) return;
+
+  // A screen point in space unprojects to the globe's limb. Measure the visible
+  // diameter in CSS pixels so the same framing looks alike at any window size.
+  const center = map.project(map.getCenter());
+  const edgeX = (offset: number) =>
+    map.project(map.unproject([center.x + offset, center.y])).x;
+  const fill = (edgeX(span / 2) - edgeX(-span / 2)) / span;
+  const progress = Math.min(1, Math.max(0, (fill - 0.55) / (0.8 - 0.55)));
+  // Calibrated against the rendered daylight globe, including its atmospheric light.
+  const opacity = Math.round((1 - 0.57 * progress) * 1000) / 1000;
+  if (map.getPaintProperty("sunlight", "raster-opacity") !== opacity) {
+    map.setPaintProperty("sunlight", "raster-opacity", opacity);
+  }
+}
 const formatPosition = (lat: number, lon: number) =>
   Math.abs(lat).toFixed(2) +
   "°" +
@@ -56,6 +79,7 @@ export default function Atlas(props: AtlasProps) {
   layerPrefs.current = layers;
   function syncVisibility(m: maplibregl.Map) {
     const prefs = layerPrefs.current;
+    updateNightExposure(m);
     for (const id of ["relief", "iceland-relief"]) {
       m.setLayoutProperty(
         id,
@@ -160,8 +184,12 @@ export default function Atlas(props: AtlasProps) {
     }
     paintSky();
     updateReadout();
-    m.on("move", paintSky);
-    m.on("resize", paintSky);
+    const updateView = () => {
+      paintSky();
+      updateNightExposure(m);
+    };
+    m.on("move", updateView);
+    m.on("resize", updateView);
     const clock = window.setInterval(updateSun, 15000);
     document.addEventListener("visibilitychange", updateSun);
     window.addEventListener("focus", updateSun);
