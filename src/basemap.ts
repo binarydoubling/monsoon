@@ -3,16 +3,23 @@ import { atmospherePosition, solarPosition } from "./sun";
 
 const lat = (y: number) =>
   (Math.atan(Math.sinh(Math.PI * (1 - 2 * y))) * 180) / Math.PI;
+
 const icelandWest = -30.9375,
   icelandEast = -8.4375;
+
 const lines: number[][][] = [];
+
 for (let lng = -180; lng < 180; lng += 15)
   lines.push(Array.from({ length: 89 }, (_, i) => [lng, i * 2 - 88]));
+
 for (let lat = -75; lat <= 75; lat += 15)
   lines.push(Array.from({ length: 181 }, (_, i) => [i * 2 - 180, lat]));
+
 export const providerURL = "https://tiles.openfreemap.org/styles/liberty";
+
 const sentinelCredit =
   '<a href="https://cloudless.eox.at">EOxCloudless</a> by <a href="https://eox.at">EOX IT Services GmbH</a> (Contains modified Copernicus Sentinel data 2025) · <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a>';
+
 const imageryMinZoom = {
   "satellite-overview": 0,
   "sentinel-2": 0,
@@ -20,7 +27,9 @@ const imageryMinZoom = {
   "us-naip": 15,
   "iceland-ortho": 10,
 };
+
 export const imageryLayers = Object.keys(imageryMinZoom);
+
 const imagery: LayerSpecification[] = Object.entries(imageryMinZoom).map(
   ([id, minzoom]) => ({
     id,
@@ -30,12 +39,14 @@ const imagery: LayerSpecification[] = Object.entries(imageryMinZoom).map(
     paint: { "raster-fade-duration": 0 },
   }),
 );
+
 export function atlasStyle(
   pixelRatio: number,
   detail?: StyleSpecification,
 ): StyleSpecification {
   // MapLibre sizes raster tiles in CSS pixels. Request finer tiles for dense screens.
   const density = Math.min(2, Math.max(1, pixelRatio));
+
   const base: LayerSpecification[] = [
     {
       id: "relief",
@@ -53,14 +64,17 @@ export function atlasStyle(
       paint: { "raster-fade-duration": 0 },
     },
   ];
+
   const streets = (detail?.layers ?? []).map((layer) => ({
     ...layer,
     minzoom: Math.max(layer.minzoom ?? 0, 5.8),
   }));
+
   const overlay = (layer: LayerSpecification) =>
     layer.type === "symbol" ||
     (layer.type === "line" &&
       ["boundary", "transportation"].includes(layer["source-layer"] ?? ""));
+
   return {
     version: 8,
     projection: { type: "globe" },

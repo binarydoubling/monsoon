@@ -45,6 +45,7 @@ for (const observation of observations) {
     const longitudeError = ((sun.lon + observation.gha + 540) % 360) - 180;
     assert.ok(Math.abs(longitudeError) < 0.02);
     assert.ok(Math.abs(sun.lat - observation.dec) < 0.02);
+
     assert.ok(
       Math.abs(
         solarElevation(sun, observation.lon, observation.lat) -

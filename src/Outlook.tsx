@@ -22,11 +22,13 @@ const gestureStyle = {
   touchAction: "pan-y",
   cursor: "pointer",
 } as const;
+
 const metrics = [
   ["Temperature", "thermometer"],
   ["Precipitation", "droplet"],
   ["Wind", "wind"],
 ] as const;
+
 export default function Outlook({
   hours,
   zone,
@@ -40,18 +42,24 @@ export default function Outlook({
     [metric, setMetric] = useState(0),
     [index, setIndex] = useState(0),
     [width, setWidth] = useState(340);
+
   const chart = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (!chart.current) return;
+
     const observer = new ResizeObserver(([entry]) =>
       setWidth(Math.max(90, entry.contentRect.width)),
     );
+
     observer.observe(chart.current);
     return () => observer.disconnect();
   }, []);
+
   const small = width < 540;
   const data = hours.slice(0, duration);
   if (!data.length) return null;
+
   const unit =
     metric === 0
       ? f
@@ -62,6 +70,7 @@ export default function Outlook({
         : f
           ? " mph"
           : " km/h";
+
   const vals = data.map((h) =>
     metric === 0
       ? Math.round((f ? (h.c * 9) / 5 + 32 : h.c) * 10) / 10
@@ -71,26 +80,32 @@ export default function Outlook({
           ? null
           : wind(h.kmh, f),
   );
+
   const valid = vals.filter(
       (v): v is number => v !== null && Number.isFinite(v),
     ),
     min = Math.min(...valid),
     max = Math.max(...valid);
+
   const tick = Math.max(1, Math.ceil((max - min) / 3)),
     floor = Number.isFinite(min) ? Math.floor(min / tick) * tick - tick : 0,
     ceiling = Number.isFinite(max) ? Math.ceil(max / tick) * tick + tick : 3;
+
   const left = 36,
     end = width - 15,
     top = 12,
     bottom = 110;
+
   const x = (i: number) =>
       left + ((end - left) * i) / Math.max(1, vals.length - 1),
     y = (v: number) =>
       bottom - ((v - floor) / (ceiling - floor)) * (bottom - top);
+
   const idx = Math.min(index, data.length - 1),
     h = data[idx],
     clock = (t: number) =>
       local(t, zone, { hour: "numeric" }).toLowerCase().replace(" ", "");
+
   const pick = (e: React.PointerEvent<HTMLDivElement>) =>
     setIndex(
       Math.max(
@@ -105,8 +120,10 @@ export default function Outlook({
         ),
       ),
     );
+
   const segments: [number, number][][] = [];
   let seg: [number, number][] = [];
+
   vals.forEach((v, i) => {
     if (v !== null && Number.isFinite(v)) seg.push([x(i), y(v)]);
     else if (seg.length) {
@@ -114,20 +131,26 @@ export default function Outlook({
       seg = [];
     }
   });
+
   if (seg.length) segments.push(seg);
   const color = ["#ab603c", "#407d91", "#54806e"][metric];
+
   const peak = vals.indexOf(max),
     low = vals.indexOf(min);
+
   const stamp = (i: number) =>
     local(data[i].t, zone, { weekday: "short", hour: "numeric" }).replace(
       ",",
       "",
     );
+
   const weatherChange = data.findIndex((v) => v.desc !== data[0].desc);
+
   const skyStory =
     weatherChange > 0
       ? " " + data[weatherChange].desc + " by " + stamp(weatherChange) + "."
       : "";
+
   const narrative =
     valid.length === 0
       ? "Hourly values are unavailable for this variable."
@@ -161,11 +184,13 @@ export default function Outlook({
               " around " +
               stamp(peak) +
               ".";
+
   const slots = Array.from(
     { length: Math.min(small ? 3 : 4, data.length) },
     (_, i) =>
       Math.floor((i * data.length) / Math.min(small ? 3 : 4, data.length)),
   );
+
   return (
     <div
       className="stack"
@@ -293,6 +318,7 @@ export default function Outlook({
           </defs>
           {Array.from({ length: 4 }, (_, i) => {
             const yy = top + (i * (bottom - top)) / 3;
+
             return (
               <g key={i}>
                 <line
@@ -321,6 +347,7 @@ export default function Outlook({
               .map(([a, b], j) => {
                 if (!j) return "M" + a + " " + b;
                 const mid = (a + s[j - 1][0]) / 2;
+
                 return (
                   "C" +
                   mid +
@@ -337,6 +364,7 @@ export default function Outlook({
                 );
               })
               .join(" ");
+
             return (
               <g key={i}>
                 <path
@@ -370,7 +398,9 @@ export default function Outlook({
               i !== data.length - 1
             )
               return null;
+
             if (i !== data.length - 1 && data.length - i <= 2) return null;
+
             return (
               <g key={i}>
                 {vals[i] != null && (

@@ -19,7 +19,7 @@ Run `npm run build` on macOS, Windows, or Linux to package Monsoon for the curre
 
 ## Development checks
 
-Use `npm run typecheck` for strict TypeScript checks, `npm run format` to apply Prettier, and `npm run format:check` to verify formatting.
+Use `npm run typecheck` for strict TypeScript checks. Run `npm run format` to apply Prettier and insert the blank lines ESLint requires around code blocks and multiline statements. Use `npm run lint` to check spacing or `npm run format:check` to check both tools.
 
 ## Data
 

@@ -17,19 +17,23 @@ import {
   Wind,
   X,
 } from "lucide-react";
+
 export const ink = "#203e36",
   sub = "#62716a",
   line = "#d3d7c9",
   paper = "#f5f4ec",
   card = "#fbfaf4",
   orange = "#bd572e";
+
 export const row = { flexDirection: "row", alignItems: "center" } as const;
+
 export const box = {
   borderColor: line,
   borderWidth: 1,
   borderRadius: 8,
   backgroundColor: card,
 };
+
 export function AtlasText({
   children,
   size = 15,
@@ -66,6 +70,7 @@ export function AtlasText({
     </span>
   );
 }
+
 export function Label({
   children,
   color = sub,
@@ -81,6 +86,7 @@ export function Label({
     </AtlasText>
   );
 }
+
 const icons = {
   activity: Activity,
   bookmark: Bookmark,
@@ -99,7 +105,9 @@ const icons = {
   wind: Wind,
   x: X,
 };
+
 export type IconName = keyof typeof icons;
+
 export function Icon({
   name,
   size = 17,
@@ -112,6 +120,7 @@ export function Icon({
   const Glyph = icons[name];
   return <Glyph size={size} color={color} aria-hidden="true" />;
 }
+
 export function Button({
   label,
   children,
@@ -123,6 +132,7 @@ export function Button({
     </button>
   );
 }
+
 export function Logo() {
   return (
     <svg width={37} height={37} viewBox="0 0 40 40">
@@ -156,11 +166,13 @@ export function Logo() {
     </svg>
   );
 }
+
 export function WeatherArt({ desc = "", day = true, size = 70 }) {
   const wet = /rain|drizzle|shower|thunder/i.test(desc),
     snowy = /snow|sleet/i.test(desc),
     clear = /clear|sunny|fair/i.test(desc),
     partial = /partly|mostly clear|mostly sunny/i.test(desc);
+
   return (
     <svg width={size} height={size * 0.8} viewBox="0 0 90 72">
       {(clear || partial) && (

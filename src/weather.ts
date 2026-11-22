@@ -1,12 +1,15 @@
 import snapshot from "./reykjavik.json";
+
 export interface Coordinates {
   lat: number;
   lon: number;
 }
+
 export interface Place extends Coordinates {
   name: string;
   region: string;
 }
+
 export interface ForecastHour {
   t: number;
   c: number;
@@ -18,11 +21,13 @@ export interface ForecastHour {
   desc: string;
   day: boolean;
 }
+
 export interface Forecast {
   source: "NWS" | "Open-Meteo";
   zone: string;
   hours: ForecastHour[];
 }
+
 type MeteoResponse = {
   timezone: string;
   hourly: { time: number[] } & Record<
@@ -30,9 +35,11 @@ type MeteoResponse = {
     (number | null)[]
   >;
 };
+
 interface NwsPoint {
   properties: { timeZone: string; forecastHourly: string };
 }
+
 interface NwsHourly {
   properties: {
     periods: {
@@ -48,12 +55,14 @@ interface NwsHourly {
     }[];
   };
 }
+
 export const home: Place = {
   name: "Reykjavík",
   region: "Iceland",
   lat: 64.1466,
   lon: -21.9426,
 };
+
 export const places: Place[] = [
   home,
   { name: "Anchorage", region: "Alaska, US", lat: 61.2181, lon: -149.9003 },
@@ -62,6 +71,7 @@ export const places: Place[] = [
   { name: "Cape Town", region: "South Africa", lat: -33.9249, lon: 18.4241 },
   { name: "Wellington", region: "New Zealand", lat: -41.2865, lon: 174.7762 },
 ];
+
 export const coords = (p: Coordinates) =>
   Math.abs(p.lat).toFixed(2) +
   "°" +
@@ -70,8 +80,10 @@ export const coords = (p: Coordinates) =>
   Math.abs(p.lon).toFixed(2) +
   "°" +
   (p.lon < 0 ? "W" : "E");
+
 export const key = (p: Coordinates) =>
   p.lat.toFixed(4) + "," + p.lon.toFixed(4);
+
 export function condition(n: number | null) {
   if (n == null) return "Conditions unavailable";
   if (n === 0) return "Clear skies";
@@ -88,14 +100,18 @@ export function condition(n: number | null) {
   if (n <= 86) return "Snow showers";
   return "Thunderstorms";
 }
+
 export const temp = (c: number, f: boolean) =>
   Math.round(f ? (c * 9) / 5 + 32 : c);
+
 export const wind = (k: number | null, f: boolean) =>
   k === null || !Number.isFinite(k) ? null : Math.round(f ? k / 1.609344 : k);
+
 export const compass = (d: number | null) =>
   d === null || !Number.isFinite(d) || d < 0
     ? ""
     : ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(d / 45) % 8];
+
 export function local(
   t: number,
   zone: string,
@@ -105,17 +121,20 @@ export function local(
     t * 1000,
   );
 }
+
 export async function getJSON<T>(url: string, signal: AbortSignal): Promise<T> {
   const control = new AbortController();
   const abort = () => control.abort();
   if (signal?.aborted) abort();
   signal?.addEventListener("abort", abort);
   const timer = setTimeout(abort, 8500);
+
   try {
     const r = await fetch(url, {
       signal: control.signal,
       headers: { Accept: "application/json" },
     });
+
     if (!r.ok) throw Error("Service unavailable");
     return await r.json();
   } finally {
@@ -123,8 +142,10 @@ export async function getJSON<T>(url: string, signal: AbortSignal): Promise<T> {
     signal?.removeEventListener("abort", abort);
   }
 }
+
 function meteo(data: MeteoResponse): Forecast {
   const h = data.hourly;
+
   return {
     source: "Open-Meteo",
     zone: data.timezone,
@@ -146,27 +167,34 @@ function meteo(data: MeteoResponse): Forecast {
       ),
   };
 }
+
 export const seed = meteo(snapshot);
 const memo = new Map<string, { at: number; value: Forecast }>();
+
 export async function forecast(
   p: Place,
   signal: AbortSignal,
 ): Promise<Forecast> {
   const id = key(p),
     old = memo.get(id);
+
   if (old && Date.now() - old.at < 15 * 60000) return old.value;
   let value: Forecast | undefined;
+
   const us =
     (p.lat >= 17.5 && p.lat <= 72 && (p.lon < -60 || p.lon > 170)) ||
     (p.lat > 12 && p.lat < 21 && p.lon > 144 && p.lon < 146) ||
     (p.lat < -10 && p.lat > -16 && p.lon < -168 && p.lon > -173);
+
   if (us)
     try {
       const meta = (
         await getJSON<NwsPoint>("https://api.weather.gov/points/" + id, signal)
       ).properties;
+
       const data = (await getJSON<NwsHourly>(meta.forecastHourly, signal))
         .properties;
+
       const hours = data.periods
         .filter(
           (h): h is typeof h & { temperature: number } => h.temperature != null,
@@ -204,11 +232,13 @@ export async function forecast(
           hum: h.relativeHumidity?.value ?? null,
           rain: h.probabilityOfPrecipitation?.value ?? null,
         }));
+
       if (hours.some((h) => h.t > Date.now() / 1000))
         value = { source: "NWS", zone: meta.timeZone, hours };
     } catch (e) {
       if (signal.aborted) throw e;
     }
+
   if (!value)
     value = meteo(
       await getJSON<MeteoResponse>(
@@ -220,8 +250,10 @@ export async function forecast(
         signal,
       ),
     );
+
   if (!value.hours.some((h) => h.t + 3600 > Date.now() / 1000))
     throw Error("Forecast expired");
+
   memo.set(id, { at: Date.now(), value });
   return value;
 }

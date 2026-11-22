@@ -22,30 +22,38 @@ export interface AtlasProps {
   sidebar: number;
   onPick: (lat: number, lon: number, name?: string) => Promise<void>;
 }
+
 const initial: [number, number] = [-25, 40];
+
 function updateNightExposure(map: maplibregl.Map) {
   if (!map.getLayer("sunlight")) return;
   const canvas = map.getCanvas();
   const { left = 0, right = 0, top = 0, bottom = 0 } = map.getPadding();
+
   const span = Math.min(
     canvas.clientWidth - left - right,
     canvas.clientHeight - top - bottom,
   );
+
   if (span <= 0) return;
 
   // A screen point in space unprojects to the globe's limb. Measure the visible
   // diameter in CSS pixels so the same framing looks alike at any window size.
   const center = map.project(map.getCenter());
+
   const edgeX = (offset: number) =>
     map.project(map.unproject([center.x + offset, center.y])).x;
+
   const fill = (edgeX(span / 2) - edgeX(-span / 2)) / span;
   const progress = Math.min(1, Math.max(0, (fill - 0.55) / (0.8 - 0.55)));
   // Calibrated against the rendered daylight globe, including its atmospheric light.
   const opacity = Math.round((1 - 0.57 * progress) * 1000) / 1000;
+
   if (map.getPaintProperty("sunlight", "raster-opacity") !== opacity) {
     map.setPaintProperty("sunlight", "raster-opacity", opacity);
   }
 }
+
 const formatPosition = (lat: number, lon: number) =>
   Math.abs(lat).toFixed(2) +
   "°" +
@@ -54,6 +62,7 @@ const formatPosition = (lat: number, lon: number) =>
   Math.abs(lon).toFixed(2) +
   "°" +
   (lon < 0 ? "W" : "E");
+
 export default function Atlas(props: AtlasProps) {
   const host = useRef<HTMLDivElement>(null),
     sky = useRef<HTMLCanvasElement>(null),
@@ -73,13 +82,16 @@ export default function Atlas(props: AtlasProps) {
     }),
     providerLayers = useRef<StyleSpecification["layers"]>([]),
     [position, setPosition] = useState(formatPosition(initial[1], initial[0]));
+
   const [sunReadout, setSunReadout] = useState("");
   latest.current = props;
   const layerPrefs = useRef(layers);
   layerPrefs.current = layers;
+
   function syncVisibility(m: maplibregl.Map) {
     const prefs = layerPrefs.current;
     updateNightExposure(m);
+
     for (const id of ["relief", "iceland-relief"]) {
       m.setLayoutProperty(
         id,
@@ -87,6 +99,7 @@ export default function Atlas(props: AtlasProps) {
         prefs.satellite ? "none" : "visible",
       );
     }
+
     for (const id of imageryLayers) {
       if (m.getLayer(id))
         m.setLayoutProperty(
@@ -95,18 +108,22 @@ export default function Atlas(props: AtlasProps) {
           prefs.satellite ? "visible" : "none",
         );
     }
+
     if (m.getLayer("meridians"))
       m.setLayoutProperty(
         "meridians",
         "visibility",
         prefs.grid ? "visible" : "none",
       );
+
     for (const layer of providerLayers.current) {
       if (!m.getLayer(layer.id)) continue;
+
       const visible =
         layer.type === "symbol"
           ? prefs.labels && (prefs.streets || layer["source-layer"] === "place")
           : prefs.streets;
+
       m.setLayoutProperty(
         layer.id,
         "visibility",
@@ -114,25 +131,30 @@ export default function Atlas(props: AtlasProps) {
       );
     }
   }
+
   useEffect(() => {
     if (map.current?.getLayer("meridians")) syncVisibility(map.current);
   }, [layers]);
+
   useEffect(() => {
     const el = host.current;
     const starCanvas = sky.current;
     if (!el || !starCanvas) return;
     const controller = new AbortController();
     let m: maplibregl.Map;
+
     const padding = {
       left: 0,
       right: latest.current.sidebar,
       top: 60,
       bottom: 0,
     };
+
     const extent = Math.max(
       200,
       Math.min(el.clientWidth - padding.right, el.clientHeight - 90),
     );
+
     try {
       m = new maplibregl.Map({
         container: el,
@@ -151,59 +173,73 @@ export default function Atlas(props: AtlasProps) {
       setFailure(
         "The globe needs WebGL. Enable hardware acceleration or try another browser.",
       );
+
       return;
     }
+
     map.current = m;
     m.setPadding(padding);
     let instant = new Date();
     let sun = solarPosition(instant.getTime());
     const paintSky = () => drawSpace(starCanvas, m, sun);
+
     function updateReadout() {
       const center = m.getCenter();
       const altitude = solarElevation(sun, center.lng, center.lat);
+
       const phase =
         altitude >= -0.833
           ? "Daylight"
           : altitude >= -18
             ? "Twilight"
             : "Night";
+
       setSunReadout(
         `${phase} · Sun ${altitude >= 0 ? "+" : "−"}${Math.abs(altitude).toFixed(1)}° · ${instant.toISOString().slice(11, 16)} UTC`,
       );
     }
+
     function updateSun() {
       if (document.hidden) return;
       instant = new Date();
       sun = solarPosition(instant.getTime());
+
       if (m.getSource("sunlight")) {
         m.setLight({ anchor: "map", position: atmospherePosition(sun) });
         m.refreshTiles("sunlight");
       }
+
       paintSky();
       updateReadout();
     }
+
     paintSky();
     updateReadout();
+
     const updateView = () => {
       paintSky();
       updateNightExposure(m);
     };
+
     m.on("move", updateView);
     m.on("resize", updateView);
     const clock = window.setInterval(updateSun, 15000);
     document.addEventListener("visibilitychange", updateSun);
     window.addEventListener("focus", updateSun);
     m.touchZoomRotate.disableRotation();
+
     m.getCanvas().setAttribute(
       "aria-label",
       "Forecast globe. Drag to explore or select a point.",
     );
+
     const marker = document.createElement("div");
     marker.className = "point-marker";
     const title = document.createElement("span");
     title.textContent = latest.current.point.name;
     marker.appendChild(title);
     const p = latest.current.point;
+
     pin.current = new maplibregl.Marker({
       element: marker,
       anchor: "center",
@@ -212,6 +248,7 @@ export default function Atlas(props: AtlasProps) {
     })
       .setLngLat([p.lon, p.lat])
       .addTo(m);
+
     m.addControl(
       new maplibregl.NavigationControl({
         showCompass: true,
@@ -219,43 +256,53 @@ export default function Atlas(props: AtlasProps) {
       }),
       "bottom-left",
     );
+
     m.addControl(
       new maplibregl.AttributionControl({ compact: true }),
       "bottom-right",
     );
+
     m.on("click", (e) => {
       const at = m.project(e.lngLat);
       if (Math.hypot(at.x - e.point.x, at.y - e.point.y) > 3) return;
+
       const feature = m
         .queryRenderedFeatures(e.point)
         .find(
           (f) =>
             f.layer.type === "symbol" && typeof f.properties.name === "string",
         );
+
       void latest.current.onPick(
         e.lngLat.lat,
         e.lngLat.wrap().lng,
         feature?.properties.name,
       );
     });
+
     marker.addEventListener("click", (ev) => {
       ev.stopPropagation();
       const p = latest.current.point;
       void latest.current.onPick(p.lat, p.lon, p.name);
     });
+
     m.on("moveend", () => {
       const c = m.getCenter().wrap();
       setPosition(formatPosition(c.lat, c.lng));
       updateReadout();
     });
+
     m.on("style.load", () => syncVisibility(m));
+
     m.once("load", async () => {
       try {
         const response = await fetch(providerURL, {
           signal: controller.signal,
         });
+
         if (!response.ok) throw Error();
         const detail: StyleSpecification = await response.json();
+
         if (!controller.signal.aborted) {
           providerLayers.current = detail.layers;
           m.setStyle(atlasStyle(m.getPixelRatio(), detail));
@@ -265,8 +312,10 @@ export default function Atlas(props: AtlasProps) {
         if (!controller.signal.aborted) setDetailUnavailable(true);
       }
     });
+
     const observer = new ResizeObserver(() => m.resize());
     observer.observe(el);
+
     return () => {
       window.clearInterval(clock);
       document.removeEventListener("visibilitychange", updateSun);
@@ -279,6 +328,7 @@ export default function Atlas(props: AtlasProps) {
       m.remove();
     };
   }, [attempt]);
+
   useEffect(() => {
     const p = props.point;
     const marker = pin.current;
@@ -286,11 +336,13 @@ export default function Atlas(props: AtlasProps) {
     marker.setLngLat([p.lon, p.lat]);
     const title = marker.getElement().firstElementChild;
     if (title) title.textContent = p.name;
+
     if (lastFocus.current !== props.focus) {
       lastFocus.current = props.focus;
       map.current?.easeTo({ center: [p.lon, p.lat], zoom: 6.2, duration: 550 });
     }
   }, [props.point, props.focus]);
+
   useEffect(() => {
     map.current?.setPadding({
       right: props.sidebar,
@@ -299,9 +351,11 @@ export default function Atlas(props: AtlasProps) {
       bottom: 0,
     });
   }, [props.sidebar]);
+
   const world = () => {
     const el = host.current;
     if (!el) return;
+
     map.current?.easeTo({
       zoom: Math.log2(
         Math.max(
@@ -312,6 +366,7 @@ export default function Atlas(props: AtlasProps) {
       duration: 500,
     });
   };
+
   return (
     <div
       className="monsoon-map"

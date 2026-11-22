@@ -32,6 +32,7 @@ import {
 } from "./src/weather";
 import type { Forecast, Place } from "./src/weather";
 import type { IconName } from "./src/ui";
+
 interface SearchResponse {
   results?: {
     name: string;
@@ -41,22 +42,27 @@ interface SearchResponse {
     longitude: number;
   }[];
 }
+
 export default function App() {
   const [viewport, setViewport] = useState(() => ({
     width: innerWidth,
     height: innerHeight,
   }));
+
   useEffect(() => {
     const resize = () =>
       setViewport({ width: innerWidth, height: innerHeight });
+
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
+
   const { width, height } = viewport;
   const small = width < 760;
   const dialog = useRef<HTMLDialogElement>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const panelWidth = Math.min(384, Math.round(width * 0.4));
+
   const [point, setPoint] = useState(home),
     [data, setForecast] = useState<Forecast | null>(seed),
     [state, setStatus] = useState<"loading" | "live" | "offline">("loading"),
@@ -69,6 +75,7 @@ export default function App() {
     [results, setResults] = useState(places),
     [searchState, setSearchStatus] = useState(""),
     [storageReady, setStorageReady] = useState(false);
+
   useEffect(() => {
     try {
       const savedPoints = localStorage.getItem("monsoon:saved");
@@ -77,10 +84,13 @@ export default function App() {
     } catch {
       /* Storage can be unavailable in private browser sessions. */
     }
+
     setStorageReady(true);
   }, []);
+
   useEffect(() => {
     if (!storageReady) return;
+
     try {
       localStorage.setItem("monsoon:saved", JSON.stringify(saved));
       localStorage.setItem("monsoon:unit", unit ? "F" : "C");
@@ -88,14 +98,17 @@ export default function App() {
       /* Preferences still work for this session. */
     }
   }, [saved, unit, storageReady]);
+
   useEffect(() => {
     if (modal) dialog.current?.showModal();
     else dialog.current?.close();
   }, [modal]);
+
   useEffect(() => {
     const ctrl = new AbortController();
     setStatus("loading");
     setForecast(key(point) === key(home) ? seed : null);
+
     forecast(point, ctrl.signal)
       .then((v) => {
         if (!ctrl.signal.aborted) {
@@ -106,24 +119,32 @@ export default function App() {
       .catch(() => {
         if (!ctrl.signal.aborted) setStatus("offline");
       });
+
     return () => ctrl.abort();
   }, [point, retry]);
+
   useEffect(() => {
     if (modal !== "search") return;
+
     const text = query.trim(),
       ctrl = new AbortController();
+
     const cached = places.filter((p) =>
       (p.name + " " + p.region).toLowerCase().includes(text.toLowerCase()),
     );
+
     setResults(cached);
     setSearchStatus("");
     if (!text) return;
+
     const coord = text.match(
       /^\s*([+-]?\d+(?:\.\d+)?)\s*[, ]\s*([+-]?\d+(?:\.\d+)?)\s*$/,
     );
+
     if (coord) {
       const lat = Number(coord[1]),
         lon = Number(coord[2]);
+
       if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180)
         setResults([
           { name: "Dropped pin", region: coords({ lat, lon }), lat, lon },
@@ -132,10 +153,13 @@ export default function App() {
         setSearchStatus(
           "Latitude must be within ±90° and longitude within ±180°.",
         );
+
       return;
     }
+
     if (text.length < 2) return;
     setSearchStatus("Searching…");
+
     const timer = setTimeout(async () => {
       try {
         const v = await getJSON<SearchResponse>(
@@ -143,14 +167,18 @@ export default function App() {
             encodeURIComponent(text),
           ctrl.signal,
         );
+
         if (ctrl.signal.aborted) return;
+
         const rows = (v.results || []).map((p) => ({
           name: p.name,
           region: [p.admin1, p.country].filter(Boolean).join(", "),
           lat: p.latitude,
           lon: p.longitude,
         }));
+
         setResults(rows.length ? rows : cached);
+
         setSearchStatus(
           rows.length || cached.length
             ? ""
@@ -163,11 +191,13 @@ export default function App() {
           );
       }
     }, 300);
+
     return () => {
       clearTimeout(timer);
       ctrl.abort();
     };
   }, [modal, query]);
+
   const selected = saved.some((p) => key(p) === key(point)),
     toggle = () =>
       setSaved((s) =>
@@ -175,24 +205,30 @@ export default function App() {
           ? s.filter((p) => key(p) !== key(point))
           : [point, ...s],
       );
+
   function choose(p: Place, center = true) {
     setPoint(p);
     setSheetOpen(true);
     if (center) setFocus((v) => v + 1);
     setModal("");
   }
+
   function openSearch() {
     setQuery("");
     setModal("search");
   }
+
   useEffect(() => {
     const timer = setInterval(() => setRetry((n) => n + 1), 30 * 60 * 1000);
     return () => clearInterval(timer);
   }, []);
+
   const future =
     data?.hours.filter((h) => h.t + 3600 > Date.now() / 1000) || [];
+
   const hours = future.length ? future : data?.hours || [],
     h = hours[0];
+
   const clock =
     data &&
     h &&
@@ -201,11 +237,14 @@ export default function App() {
       minute: "2-digit",
       hour12: false,
     });
+
   const date =
     data &&
     h &&
     local(h.t, data.zone, { weekday: "short", month: "short", day: "numeric" });
+
   const nextDay = hours.slice(0, 24).map((a) => temp(a.c, unit));
+
   const metrics: [IconName, string, React.ReactNode][] = h
     ? [
         [
@@ -225,6 +264,7 @@ export default function App() {
         ],
       ]
     : [];
+
   return (
     <main className="stack app">
       <div className="stack" style={{ flex: 1, overflow: "hidden" }}>
@@ -623,6 +663,7 @@ export default function App() {
         onClick={(event) => {
           if (event.target !== event.currentTarget) return;
           const r = event.currentTarget.getBoundingClientRect();
+
           if (
             event.clientX < r.left ||
             event.clientX > r.right ||
