@@ -4,6 +4,17 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "./atlas.css";
 import type { Place } from "./weather";
 import { atlasStyle, imageryLayers, providerURL } from "./basemap";
+import {
+  atmospherePosition,
+  solarElevation,
+  solarPosition,
+  sunlightTile,
+} from "./sun";
+import { drawSpace } from "./space";
+
+maplibregl.addProtocol("monsoon-sunlight", async () => ({
+  data: await sunlightTile(solarPosition(Date.now())),
+}));
 
 export interface AtlasProps {
   point: Place;
@@ -22,6 +33,7 @@ const formatPosition = (lat: number, lon: number) =>
   (lon < 0 ? "W" : "E");
 export default function Atlas(props: AtlasProps) {
   const host = useRef<HTMLDivElement>(null),
+    sky = useRef<HTMLCanvasElement>(null),
     map = useRef<maplibregl.Map | null>(null),
     pin = useRef<maplibregl.Marker | null>(null),
     latest = useRef(props),
@@ -32,12 +44,13 @@ export default function Atlas(props: AtlasProps) {
     [menuOpen, setMenuOpen] = useState(false),
     [layers, setLayers] = useState({
       satellite: true,
-      grid: true,
+      grid: false,
       streets: false,
       labels: true,
     }),
     providerLayers = useRef<StyleSpecification["layers"]>([]),
     [position, setPosition] = useState(formatPosition(initial[1], initial[0]));
+  const [sunReadout, setSunReadout] = useState("");
   latest.current = props;
   const layerPrefs = useRef(layers);
   layerPrefs.current = layers;
@@ -82,7 +95,8 @@ export default function Atlas(props: AtlasProps) {
   }, [layers]);
   useEffect(() => {
     const el = host.current;
-    if (!el) return;
+    const starCanvas = sky.current;
+    if (!el || !starCanvas) return;
     const controller = new AbortController();
     let m: maplibregl.Map;
     const padding = {
@@ -117,6 +131,40 @@ export default function Atlas(props: AtlasProps) {
     }
     map.current = m;
     m.setPadding(padding);
+    let instant = new Date();
+    let sun = solarPosition(instant.getTime());
+    const paintSky = () => drawSpace(starCanvas, m, sun);
+    function updateReadout() {
+      const center = m.getCenter();
+      const altitude = solarElevation(sun, center.lng, center.lat);
+      const phase =
+        altitude >= -0.833
+          ? "Daylight"
+          : altitude >= -18
+            ? "Twilight"
+            : "Night";
+      setSunReadout(
+        `${phase} · Sun ${altitude >= 0 ? "+" : "−"}${Math.abs(altitude).toFixed(1)}° · ${instant.toISOString().slice(11, 16)} UTC`,
+      );
+    }
+    function updateSun() {
+      if (document.hidden) return;
+      instant = new Date();
+      sun = solarPosition(instant.getTime());
+      if (m.getSource("sunlight")) {
+        m.setLight({ anchor: "map", position: atmospherePosition(sun) });
+        m.refreshTiles("sunlight");
+      }
+      paintSky();
+      updateReadout();
+    }
+    paintSky();
+    updateReadout();
+    m.on("move", paintSky);
+    m.on("resize", paintSky);
+    const clock = window.setInterval(updateSun, 15000);
+    document.addEventListener("visibilitychange", updateSun);
+    window.addEventListener("focus", updateSun);
     m.touchZoomRotate.disableRotation();
     m.getCanvas().setAttribute(
       "aria-label",
@@ -170,6 +218,7 @@ export default function Atlas(props: AtlasProps) {
     m.on("moveend", () => {
       const c = m.getCenter().wrap();
       setPosition(formatPosition(c.lat, c.lng));
+      updateReadout();
     });
     m.on("style.load", () => syncVisibility(m));
     m.once("load", async () => {
@@ -191,6 +240,9 @@ export default function Atlas(props: AtlasProps) {
     const observer = new ResizeObserver(() => m.resize());
     observer.observe(el);
     return () => {
+      window.clearInterval(clock);
+      document.removeEventListener("visibilitychange", updateSun);
+      window.removeEventListener("focus", updateSun);
       controller.abort();
       observer.disconnect();
       pin.current?.remove();
@@ -237,6 +289,7 @@ export default function Atlas(props: AtlasProps) {
       className="monsoon-map"
       style={{ "--sidebar": props.sidebar + "px" } as React.CSSProperties}
     >
+      <canvas className="space-sky" aria-hidden="true" ref={sky} />
       <div className="globe-surface" ref={host} />
       <div className="atlas-tools">
         <button
@@ -292,6 +345,7 @@ export default function Atlas(props: AtlasProps) {
       <div className="map-readout">
         <strong>MAP CENTER</strong>
         <span>{position}</span>
+        <small>{sunReadout}</small>
       </div>
       {(failure || detailUnavailable) && (
         <div className="map-message">

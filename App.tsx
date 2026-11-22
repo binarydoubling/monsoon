@@ -721,6 +721,16 @@ export default function App() {
                 "https://open-meteo.com/",
               ],
               [
+                "Hipparcos star catalogue",
+                "Star positions, brightness and colour from ESA’s Hipparcos Catalogue (1997), distributed by CDS VizieR.",
+                "https://cdsarc.cds.unistra.fr/viz-bin/cat/I/239",
+              ],
+              [
+                "Sunlight",
+                "Solar position calculated from UTC using the U.S. Naval Observatory’s approximate solar coordinates.",
+                "https://aa.usno.navy.mil/faq/sun_approx",
+              ],
+              [
                 "OpenFreeMap",
                 "Street cartography © OpenMapTiles, with data from OpenStreetMap contributors. Rendered by MapLibre.",
                 "https://openfreemap.org/",

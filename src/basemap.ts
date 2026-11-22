@@ -1,4 +1,5 @@
 import type { StyleSpecification, LayerSpecification } from "maplibre-gl";
+import { atmospherePosition, solarPosition } from "./sun";
 
 const lat = (y: number) =>
   (Math.atan(Math.sinh(Math.PI * (1 - 2 * y))) * 180) / Math.PI;
@@ -63,21 +64,26 @@ export function atlasStyle(
   return {
     version: 8,
     projection: { type: "globe" },
+    light: {
+      anchor: "map",
+      position: atmospherePosition(solarPosition(Date.now())),
+      "position-transition": { duration: 0 },
+    },
     sky: {
       "atmosphere-blend": [
         "interpolate",
         ["linear"],
         ["zoom"],
         0,
-        0.85,
+        0.55,
         4,
-        0.5,
+        0.32,
         6,
         0,
       ],
-      "sky-color": "#1d4550",
-      "horizon-color": "#a9d7d0",
-      "fog-color": "#abc5c2",
+      "sky-color": "#000000",
+      "horizon-color": "#05080d",
+      "fog-color": "#090c11",
       "fog-ground-blend": 0,
       "horizon-fog-blend": 0,
       "sky-horizon-blend": 0.3,
@@ -85,6 +91,12 @@ export function atlasStyle(
     ...(detail ? { glyphs: detail.glyphs, sprite: detail.sprite } : {}),
     sources: {
       ...detail?.sources,
+      sunlight: {
+        type: "raster",
+        tiles: ["monsoon-sunlight://earth/{z}/{x}/{y}"],
+        tileSize: 512,
+        maxzoom: 0,
+      },
       "satellite-overview": {
         type: "raster",
         tiles: ["/maps/sentinel-2025/{z}/{x}/{y}.jpg"],
@@ -169,12 +181,19 @@ export function atlasStyle(
       ...base,
       ...streets.filter((layer) => !overlay(layer)),
       ...imagery,
+      {
+        id: "sunlight",
+        type: "raster",
+        source: "sunlight",
+        paint: { "raster-fade-duration": 0 },
+      },
       ...streets.filter(overlay),
       {
         id: "meridians",
         type: "line",
         source: "grid",
         maxzoom: 5.5,
+        layout: { visibility: "none" },
         paint: {
           "line-color": "#e7eed9",
           "line-opacity": 0.27,
