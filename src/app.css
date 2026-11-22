@@ -7,11 +7,10 @@ body,
   overflow: hidden;
 }
 .app {
+  --font-body: "Inter Variable", system-ui, sans-serif;
   background: #102125;
   color: #203e36;
-  font:
-    15px "DM Sans",
-    sans-serif;
+  font: 15px var(--font-body);
 }
 .stack,
 .control,
@@ -69,14 +68,17 @@ body,
   min-width: 0;
 }
 .sans,
-.bold {
-  font-family: "DM Sans", sans-serif;
+.bold,
+.app input {
+  font-family: var(--font-body);
 }
 .bold {
   font-weight: 600;
 }
-.serif {
-  font-family: Times, "Times New Roman", serif;
+.display {
+  font-family: "Bowlby One", var(--font-body);
+  font-weight: 400;
+  line-height: 1.2;
 }
 .mono {
   font-family: "IBM Plex Mono", monospace;

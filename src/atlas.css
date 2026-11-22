@@ -3,7 +3,6 @@
   inset: 0;
   overflow: hidden;
   background: #000;
-  font-family: system-ui, sans-serif;
 }
 .space-sky {
   position: absolute;
@@ -18,6 +17,7 @@
 }
 .monsoon-map .maplibregl-map {
   background: transparent;
+  font-family: var(--font-body);
 }
 .point-marker {
   height: 12px;
@@ -40,9 +40,7 @@
   border-radius: 4px;
   padding: 3px 8px;
   white-space: nowrap;
-  font:
-    600 12px/18px system-ui,
-    sans-serif;
+  font: 600 12px/18px var(--font-body);
 }
 .atlas-tools {
   position: absolute;
@@ -59,9 +57,7 @@
   border-radius: 5px;
   padding: 7px 10px;
   cursor: pointer;
-  font:
-    600 16px/20px system-ui,
-    sans-serif;
+  font: 600 16px/20px var(--font-body);
 }
 .atlas-tools span {
   font-size: 12px;
@@ -136,9 +132,7 @@
   color: #203e36;
   border-radius: 5px;
   box-shadow: 0 2px 10px #07131944;
-  font:
-    13px system-ui,
-    sans-serif;
+  font: 13px var(--font-body);
   white-space: nowrap;
 }
 .layer-choices label {

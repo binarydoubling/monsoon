@@ -198,11 +198,16 @@ export default function Outlook({
     >
       <div
         className="stack"
-        style={{ ...row, justifyContent: "space-between", gap: 8 }}
+        style={{
+          ...row,
+          justifyContent: "space-between",
+          gap: 8,
+          flexWrap: "wrap",
+        }}
       >
         <div className="stack" style={{ ...row, gap: 10 }}>
           <Icon name="activity" size={23} color={orange} />
-          <AtlasText face="serif" size={small ? 25 : 31}>
+          <AtlasText face="display" size={small ? 20 : 22}>
             Hourly outlook
           </AtlasText>
         </div>

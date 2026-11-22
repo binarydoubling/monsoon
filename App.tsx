@@ -309,8 +309,8 @@ export default function App() {
           <Button label="Monsoon home" onClick={() => choose(home)}>
             <Logo />
             <AtlasText
-              face="serif"
-              size={small ? 25 : 31}
+              face="display"
+              size={small ? 22 : 28}
               color={card}
               style={{ letterSpacing: -1 }}
             >
@@ -480,9 +480,9 @@ export default function App() {
                 </div>
                 <div className="stack">
                   <AtlasText
-                    face="serif"
-                    size={35}
-                    style={{ letterSpacing: -1.1, lineHeight: "42px" }}
+                    face="display"
+                    size={31}
+                    style={{ letterSpacing: -0.6 }}
                   >
                     {point.name}
                   </AtlasText>
@@ -506,9 +506,9 @@ export default function App() {
                     >
                       <div className="stack">
                         <AtlasText
-                          face="serif"
-                          size={63}
-                          style={{ letterSpacing: -3, lineHeight: "72px" }}
+                          face="display"
+                          size={54}
+                          style={{ letterSpacing: -1.5 }}
                         >
                           {temp(h.c, unit)}°
                           <AtlasText size={24} face="sans" color={sub}>
@@ -677,7 +677,7 @@ export default function App() {
           className="stack"
           style={{ ...row, justifyContent: "space-between" }}
         >
-          <AtlasText id="dialog-title" face="serif" size={27}>
+          <AtlasText id="dialog-title" face="display" size={23}>
             {modal === "saved"
               ? "Saved points"
               : modal === "search"
@@ -706,7 +706,6 @@ export default function App() {
               style={{
                 ...box,
                 padding: 12,
-                fontFamily: '"DM Sans", sans-serif',
                 fontSize: 16,
                 color: ink,
               }}

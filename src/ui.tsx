@@ -46,7 +46,7 @@ export function AtlasText({
   numberOfLines?: number;
   size?: number;
   color?: string;
-  face?: "sans" | "serif" | "mono" | "bold";
+  face?: "sans" | "display" | "mono" | "bold";
 }) {
   return (
     <span
