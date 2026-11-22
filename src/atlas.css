@@ -1,5 +1,6 @@
 .monsoon-map {
   position: absolute;
+  isolation: isolate;
   inset: 0;
   overflow: hidden;
   background: #000;
@@ -22,21 +23,21 @@
 .point-marker {
   height: 12px;
   width: 12px;
-  background: #e17b44;
-  border: 2px solid #fff4d8;
+  background: var(--mauve);
+  border: 2px solid var(--text);
   border-radius: 100%;
   box-shadow:
-    0 0 0 5px #c466385f,
-    0 0 0 11px #d4783a35;
+    0 0 0 5px color-mix(in srgb, var(--mauve) 33%, transparent),
+    0 0 0 11px color-mix(in srgb, var(--mauve) 16%, transparent);
   cursor: pointer;
 }
 .point-marker span {
   position: absolute;
   left: 22px;
   top: -6px;
-  border: 1px solid #b9c6b08a;
-  background: #17372ee8;
-  color: #fff9e6;
+  border: 1px solid var(--surface1);
+  background: var(--mantle);
+  color: var(--text);
   border-radius: 4px;
   padding: 3px 8px;
   white-space: nowrap;
@@ -51,9 +52,9 @@
 }
 .atlas-tools button,
 .map-message button {
-  color: #e8ecdc;
-  background: #172e30ed;
-  border: 1px solid #526663;
+  color: var(--text);
+  background: var(--mantle);
+  border: 1px solid var(--surface1);
   border-radius: 5px;
   padding: 7px 10px;
   cursor: pointer;
@@ -64,6 +65,43 @@
   vertical-align: 2px;
   margin-left: 3px;
 }
+
+.monsoon-map .maplibregl-ctrl-group,
+.monsoon-map .maplibregl-ctrl.maplibregl-ctrl-attrib {
+  color: var(--text);
+  background-color: var(--mantle);
+  box-shadow: 0 0 0 1px var(--surface1);
+}
+
+.monsoon-map .maplibregl-ctrl-group button + button {
+  border-color: var(--surface1);
+}
+
+.monsoon-map .maplibregl-ctrl-attrib a {
+  color: var(--lavender);
+}
+
+@media (forced-colors: none) {
+  .monsoon-map .maplibregl-ctrl-icon,
+  .monsoon-map .maplibregl-ctrl-attrib-button {
+    filter: invert(1);
+  }
+  .monsoon-map .maplibregl-ctrl-attrib-button {
+    background-color: transparent;
+  }
+}
+
+.atlas-tools button:hover,
+.map-message button:hover,
+.monsoon-map .maplibregl-ctrl-group button:not(:disabled):hover {
+  background-color: var(--surface0);
+}
+
+.monsoon-map :is(button, input, summary, a):focus-visible {
+  outline: 2px solid var(--mauve);
+  outline-offset: -2px;
+}
+
 .map-readout {
   pointer-events: none;
   position: absolute;
@@ -71,18 +109,18 @@
   bottom: 38px;
   display: grid;
   gap: 4px;
-  color: #e4eddb;
-  text-shadow: 0 1px 3px #172b2b;
+  color: var(--text);
+  text-shadow: 0 1px 3px var(--crust);
   font: 11px monospace;
 }
 .map-readout strong {
   font: 9px monospace;
   letter-spacing: 1.6px;
-  color: #bbd1c5;
+  color: var(--lavender);
 }
 .map-readout small {
   font-size: 10px;
-  color: #d2d6d8;
+  color: var(--subtext0);
 }
 .monsoon-map .maplibregl-ctrl-bottom-left {
   left: 12px;
@@ -97,7 +135,8 @@
   top: 140px;
   left: 20px;
   max-width: 300px;
-  background: #f8f8ed;
+  background: var(--base);
+  border: 1px solid var(--surface1);
   padding: 10px;
   font-size: 13px;
   border-radius: 4px;
@@ -128,10 +167,11 @@
   display: grid;
   gap: 10px;
   padding: 13px;
-  background: #f9f9f0;
-  color: #203e36;
+  background: var(--base);
+  border: 1px solid var(--surface1);
+  color: var(--text);
   border-radius: 5px;
-  box-shadow: 0 2px 10px #07131944;
+  box-shadow: 0 2px 10px var(--crust);
   font: 13px var(--font-body);
   white-space: nowrap;
 }
@@ -142,7 +182,7 @@
   cursor: pointer;
 }
 .layer-choices input {
-  accent-color: #294a3f;
+  accent-color: var(--mauve);
 }
 @media (max-width: 759px) {
   .monsoon-map .maplibregl-ctrl-bottom-right {

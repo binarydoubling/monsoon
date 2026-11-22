@@ -213,7 +213,7 @@ export function atlasStyle(
         maxzoom: 5.5,
         layout: { visibility: "none" },
         paint: {
-          "line-color": "#e7eed9",
+          "line-color": "#b4befe",
           "line-opacity": 0.27,
           "line-width": 0.7,
         },

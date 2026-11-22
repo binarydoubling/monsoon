@@ -1,4 +1,12 @@
-import { app, BrowserWindow, Menu, net, protocol, shell } from "electron";
+import {
+  app,
+  BrowserWindow,
+  Menu,
+  nativeTheme,
+  net,
+  protocol,
+  shell,
+} from "electron";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -31,7 +39,7 @@ function createWindow() {
     height: 860,
     minWidth: 680,
     minHeight: 480,
-    backgroundColor: "#102125",
+    backgroundColor: "#11111b",
     show: false,
     webPreferences: {
       sandbox: true,
@@ -57,6 +65,8 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+  nativeTheme.themeSource = "dark";
+
   const root = join(app.getAppPath(), "web");
 
   protocol.handle("monsoon", async (request) => {

@@ -1,3 +1,22 @@
+:root {
+  color-scheme: dark;
+  --crust: #11111b;
+  --mantle: #181825;
+  --base: #1e1e2e;
+  --surface0: #313244;
+  --surface1: #45475a;
+  --overlay1: #7f849c;
+  --subtext0: #a6adc8;
+  --text: #cdd6f4;
+  --mauve: #cba6f7;
+  --lavender: #b4befe;
+  --peach: #fab387;
+  --yellow: #f9e2af;
+  --green: #a6e3a1;
+  --teal: #94e2d5;
+  --blue: #89b4fa;
+}
+
 html,
 body,
 #root,
@@ -8,8 +27,8 @@ body,
 }
 .app {
   --font-body: "Inter Variable", system-ui, sans-serif;
-  background: #102125;
-  color: #203e36;
+  background: var(--crust);
+  color: var(--text);
   font: 15px var(--font-body);
 }
 .stack,
@@ -57,7 +76,7 @@ body,
   opacity: 0.64;
 }
 .control:focus-visible {
-  outline: 2px solid #c88758;
+  outline: 2px solid var(--mauve);
   outline-offset: -2px;
 }
 .control svg {
@@ -88,23 +107,23 @@ body,
   max-height: 82%;
   padding: 22px;
   gap: 15px;
-  background: #fbfaf4;
-  border: 1px solid #d3d7c9;
+  background: var(--base);
+  border: 1px solid var(--surface1);
   border-radius: 8px;
   color: inherit;
 }
 .place-dialog::backdrop {
-  background: #17302866;
+  background: color-mix(in srgb, var(--crust) 75%, transparent);
 }
 .app input::placeholder {
-  color: #62716a;
+  color: var(--subtext0);
 }
 .spinner {
   width: 18px;
   height: 18px;
   margin: auto;
-  border: 2px solid #d3d7c9;
-  border-top-color: #203e36;
+  border: 2px solid var(--surface1);
+  border-top-color: var(--mauve);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }

@@ -13,7 +13,7 @@ import {
   ink,
   sub,
   line,
-  orange,
+  accent,
   paper,
   card,
 } from "./src/ui";
@@ -300,8 +300,8 @@ export default function App() {
             right: 0,
             height: small ? 57 : 66,
             paddingInline: small ? 12 : 23,
-            backgroundColor: "#112427",
-            borderBottomColor: "#405553",
+            backgroundColor: "var(--crust)",
+            borderBottomColor: line,
             borderBottomWidth: 1,
             gap: small ? 9 : 18,
           }}
@@ -311,7 +311,7 @@ export default function App() {
             <AtlasText
               face="display"
               size={small ? 22 : 28}
-              color={card}
+              color={ink}
               style={{ letterSpacing: -1 }}
             >
               Monsoon
@@ -323,10 +323,10 @@ export default function App() {
               style={{
                 paddingLeft: 15,
                 borderLeftWidth: 1,
-                borderColor: "#57706a",
+                borderColor: line,
               }}
             >
-              <Label color="#c6d3c5">WEATHER ATLAS</Label>
+              <Label color={sub}>WEATHER ATLAS</Label>
             </div>
           )}
           <div className="stack" style={{ flex: 1 }} />
@@ -337,13 +337,13 @@ export default function App() {
               height: 35,
               paddingInline: 9,
               borderWidth: small ? 0 : 1,
-              borderColor: "#4a625f",
+              borderColor: line,
               borderRadius: 5,
             }}
           >
-            <Icon name="search" size={17} color={card} />
+            <Icon name="search" size={17} color={ink} />
             {!small && (
-              <AtlasText size={13} color={card}>
+              <AtlasText size={13} color={ink}>
                 Search places or coordinates
               </AtlasText>
             )}
@@ -353,9 +353,9 @@ export default function App() {
             onClick={() => setModal("saved")}
             style={{ padding: 4 }}
           >
-            <Icon name="bookmark" size={17} color={card} />
+            <Icon name="bookmark" size={17} color={ink} />
             {!small && (
-              <AtlasText size={13} color={card}>
+              <AtlasText size={13} color={ink}>
                 Saved points
               </AtlasText>
             )}
@@ -365,7 +365,7 @@ export default function App() {
             style={{
               ...row,
               borderWidth: 1,
-              borderColor: "#506661",
+              borderColor: line,
               borderRadius: 5,
               padding: 2,
             }}
@@ -374,18 +374,19 @@ export default function App() {
               <Button
                 key={String(f)}
                 label={f ? "Use Fahrenheit" : "Use Celsius"}
+                aria-pressed={f === unit}
                 onClick={() => setFahrenheit(f)}
                 style={{
                   paddingInline: small ? 5 : 8,
                   paddingBlock: 4,
                   borderRadius: 3,
-                  backgroundColor: f === unit ? card : "transparent",
+                  backgroundColor: f === unit ? accent : "transparent",
                 }}
               >
                 <AtlasText
                   face="mono"
                   size={11}
-                  color={f === unit ? ink : card}
+                  color={f === unit ? paper : sub}
                 >
                   {f ? "°F" : "°C"}
                 </AtlasText>
@@ -452,20 +453,25 @@ export default function App() {
                   style={{ ...row, justifyContent: "space-between" }}
                 >
                   <div className="stack" style={{ ...row, gap: 7 }}>
-                    <Icon name="map-pin" size={13} color={orange} />
-                    <Label color={orange}>POINT FORECAST</Label>
+                    <Icon name="map-pin" size={13} color={accent} />
+                    <Label color={accent}>POINT FORECAST</Label>
                   </div>
                   <div className="stack" style={{ ...row, gap: 7 }}>
                     <Button
                       onClick={toggle}
                       label={selected ? "Remove saved point" : "Save point"}
+                      aria-pressed={selected}
                       style={{
                         padding: 5,
-                        backgroundColor: selected ? "#dde8d8" : paper,
+                        backgroundColor: selected ? "var(--surface0)" : paper,
                         borderRadius: 4,
                       }}
                     >
-                      <Icon name={selected ? "check" : "bookmark"} size={16} />
+                      <Icon
+                        name={selected ? "check" : "bookmark"}
+                        size={16}
+                        color={selected ? accent : sub}
+                      />
                     </Button>
                     {small && (
                       <Button
@@ -590,7 +596,8 @@ export default function App() {
                       width: 6,
                       height: 6,
                       borderRadius: 3,
-                      backgroundColor: state === "live" ? "#5b8459" : "#bb8854",
+                      backgroundColor:
+                        state === "live" ? "var(--green)" : "var(--peach)",
                     }}
                   />
                   <AtlasText size={10} color={sub}>
@@ -608,7 +615,7 @@ export default function App() {
                   </AtlasText>
                   {state === "offline" && (
                     <Button onClick={() => setRetry((v) => v + 1)}>
-                      <AtlasText size={11} color={orange}>
+                      <AtlasText size={11} color={accent}>
                         Retry
                       </AtlasText>
                     </Button>
@@ -642,7 +649,7 @@ export default function App() {
               gap: 9,
             }}
           >
-            <Icon name="map-pin" size={13} color={orange} />
+            <Icon name="map-pin" size={13} color={accent} />
             <AtlasText size={13} face="bold">
               {point.name}
             </AtlasText>
@@ -731,7 +738,7 @@ export default function App() {
                   gap: 10,
                 }}
               >
-                <Icon name="map-pin" color={orange} />
+                <Icon name="map-pin" color={accent} />
                 <div className="stack" style={{ flex: 1 }}>
                   <AtlasText face="bold">{p.name}</AtlasText>
                   <AtlasText size={12} color={sub}>

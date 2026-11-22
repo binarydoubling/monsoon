@@ -5,10 +5,9 @@ import {
   Icon,
   Label,
   WeatherArt,
-  ink,
   sub,
   card,
-  orange,
+  accent,
   line,
   row,
   box,
@@ -133,7 +132,7 @@ export default function Outlook({
   });
 
   if (seg.length) segments.push(seg);
-  const color = ["#ab603c", "#407d91", "#54806e"][metric];
+  const color = ["var(--peach)", "var(--blue)", "var(--teal)"][metric];
 
   const peak = vals.indexOf(max),
     low = vals.indexOf(min);
@@ -206,7 +205,7 @@ export default function Outlook({
         }}
       >
         <div className="stack" style={{ ...row, gap: 10 }}>
-          <Icon name="activity" size={23} color={orange} />
+          <Icon name="activity" size={23} color={accent} />
           <AtlasText face="display" size={small ? 20 : 22}>
             Hourly outlook
           </AtlasText>
@@ -224,6 +223,7 @@ export default function Outlook({
           {[24, 48].map((n) => (
             <Button
               key={n}
+              aria-pressed={duration === n}
               onClick={() => {
                 setDuration(n);
                 setIndex(0);
@@ -232,7 +232,7 @@ export default function Outlook({
                 paddingInline: small ? 9 : 13,
                 paddingBlock: 5,
                 borderRadius: 3,
-                backgroundColor: duration === n ? ink : "transparent",
+                backgroundColor: duration === n ? accent : "transparent",
               }}
             >
               <AtlasText
@@ -253,17 +253,18 @@ export default function Outlook({
         {metrics.map(([n, ic], i) => (
           <Button
             key={n}
+            aria-pressed={i === metric}
             onClick={() => setMetric(i)}
             style={{
               borderWidth: 1,
-              borderColor: i === metric ? "#b9c8b6" : line,
-              backgroundColor: i === metric ? "#e3eadc" : "transparent",
+              borderColor: i === metric ? color : line,
+              backgroundColor: i === metric ? "var(--surface0)" : "transparent",
               borderRadius: 20,
               paddingBlock: 6,
               paddingInline: small ? 8 : 13,
             }}
           >
-            <Icon name={ic} size={13} />
+            <Icon name={ic} size={13} color={i === metric ? color : sub} />
             <AtlasText size={small ? 11 : 12} face="bold">
               {n}
             </AtlasText>
