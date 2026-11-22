@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import Atlas from "./src/Atlas";
 import Outlook from "./src/Outlook";
+import DailyForecast from "./src/DailyForecast";
 import {
   AtlasText,
   Button,
   Icon,
   Logo,
   Label,
-  WeatherArt,
   row,
   box,
   ink,
@@ -24,14 +24,12 @@ import {
   key,
   coords,
   forecast,
-  local,
   temp,
-  wind,
-  compass,
   getJSON,
+  coordinatePlace,
+  reverseGeocode,
 } from "./src/weather";
 import type { Forecast, Place } from "./src/weather";
-import type { IconName } from "./src/ui";
 
 interface SearchResponse {
   results?: {
@@ -61,7 +59,12 @@ export default function App() {
   const small = width < 760;
   const dialog = useRef<HTMLDialogElement>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const panelWidth = Math.min(384, Math.round(width * 0.4));
+
+  const [panelView, setPanelView] = useState<"overview" | "minutes">(
+    "overview",
+  );
+
+  const panelWidth = Math.min(548, Math.round(width * 0.46));
 
   const [point, setPoint] = useState(home),
     [data, setForecast] = useState<Forecast | null>(seed),
@@ -79,7 +82,14 @@ export default function App() {
   useEffect(() => {
     try {
       const savedPoints = localStorage.getItem("monsoon:saved");
-      if (savedPoints) setSaved(JSON.parse(savedPoints));
+
+      if (savedPoints)
+        setSaved(
+          (JSON.parse(savedPoints) as Place[]).map((p) =>
+            p.name === "Dropped pin" ? coordinatePlace(p) : p,
+          ),
+        );
+
       setFahrenheit(localStorage.getItem("monsoon:unit") === "F");
     } catch {
       /* Storage can be unavailable in private browser sessions. */
@@ -104,12 +114,20 @@ export default function App() {
     else dialog.current?.close();
   }, [modal]);
 
+  const { lat, lon } = point;
+  const forecastPoint = useRef(key(home));
+
   useEffect(() => {
     const ctrl = new AbortController();
+    const location = { lat, lon };
     setStatus("loading");
-    setForecast(key(point) === key(home) ? seed : null);
 
-    forecast(point, ctrl.signal)
+    if (forecastPoint.current !== key(location)) {
+      forecastPoint.current = key(location);
+      setForecast(key(location) === key(home) ? seed : null);
+    }
+
+    forecast(location, ctrl.signal)
       .then((v) => {
         if (!ctrl.signal.aborted) {
           setForecast(v);
@@ -121,7 +139,32 @@ export default function App() {
       });
 
     return () => ctrl.abort();
-  }, [point, retry]);
+  }, [lat, lon, retry]);
+
+  useEffect(() => {
+    if (!point.resolveName) return;
+    const ctrl = new AbortController();
+
+    reverseGeocode(point, ctrl.signal)
+      .then((label) => {
+        if (!label || ctrl.signal.aborted) return;
+        const resolved = { lat: point.lat, lon: point.lon, ...label };
+        setPoint((current) => (current === point ? resolved : current));
+
+        setSaved((items) =>
+          items.map((p) =>
+            p.resolveName && key(p) === key(point)
+              ? { lat: p.lat, lon: p.lon, ...label }
+              : p,
+          ),
+        );
+      })
+      .catch(() => {
+        // Coordinates still identify this forecast when the lookup is unavailable.
+      });
+
+    return () => ctrl.abort();
+  }, [point]);
 
   useEffect(() => {
     if (modal !== "search") return;
@@ -146,9 +189,7 @@ export default function App() {
         lon = Number(coord[2]);
 
       if (Math.abs(lat) <= 90 && Math.abs(lon) <= 180)
-        setResults([
-          { name: "Dropped pin", region: coords({ lat, lon }), lat, lon },
-        ]);
+        setResults([coordinatePlace({ lat, lon })]);
       else
         setSearchStatus(
           "Latitude must be within ±90° and longitude within ±180°.",
@@ -208,6 +249,7 @@ export default function App() {
 
   function choose(p: Place, center = true) {
     setPoint(p);
+    setPanelView("overview");
     setSheetOpen(true);
     if (center) setFocus((v) => v + 1);
     setModal("");
@@ -223,47 +265,13 @@ export default function App() {
     return () => clearInterval(timer);
   }, []);
 
-  const future =
-    data?.hours.filter((h) => h.t + 3600 > Date.now() / 1000) || [];
+  const current = data?.current;
+  const referenceTime = current?.t ?? Date.now() / 1000;
 
-  const hours = future.length ? future : data?.hours || [],
-    h = hours[0];
+  const firstHour =
+    data?.hours.find((hour) => hour.t + 3600 > referenceTime) ?? data?.hours[0];
 
-  const clock =
-    data &&
-    h &&
-    local(h.t, data.zone, {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-
-  const date =
-    data &&
-    h &&
-    local(h.t, data.zone, { weekday: "short", month: "short", day: "numeric" });
-
-  const nextDay = hours.slice(0, 24).map((a) => temp(a.c, unit));
-
-  const metrics: [IconName, string, React.ReactNode][] = h
-    ? [
-        [
-          "wind",
-          "Wind",
-          (wind(h.kmh, unit) ?? "—") +
-            (unit ? " mph" : " km/h") +
-            " " +
-            compass(h.dir),
-        ],
-        ["droplet", "Humidity", h.hum == null ? "—" : Math.round(h.hum) + "%"],
-        ["umbrella", "Precipitation", h.rain == null ? "—" : h.rain + "%"],
-        [
-          h.pressure == null ? "clock" : "activity",
-          h.pressure == null ? "Local hour" : "Pressure",
-          h.pressure == null ? clock : Math.round(h.pressure) + " hPa",
-        ],
-      ]
-    : [];
+  const showMinutes = panelView === "minutes" && !!data && !!firstHour;
 
   return (
     <main className="stack app">
@@ -273,18 +281,20 @@ export default function App() {
             point={point}
             focus={focus}
             sidebar={small ? 0 : panelWidth + 32}
-            onPick={async (lat, lon, name) => {
+            onPick={(lat, lon, name) => {
               choose(
                 name === point.name &&
                   Math.abs(lat - point.lat) < 0.0001 &&
                   Math.abs(lon - point.lon) < 0.0001
                   ? point
-                  : {
-                      lat,
-                      lon,
-                      name: name || "Dropped pin",
-                      region: "Selected coordinates",
-                    },
+                  : name
+                    ? {
+                        lat,
+                        lon,
+                        name,
+                        region: "Selected coordinates",
+                      }
+                    : coordinatePlace({ lat, lon }),
                 false,
               );
             }}
@@ -408,7 +418,7 @@ export default function App() {
                     bottom: 0,
                     left: 0,
                     right: 0,
-                    maxHeight: height * 0.65,
+                    height: height * (showMinutes ? 0.88 : 0.76),
                     borderTopLeftRadius: 17,
                     borderTopRightRadius: 17,
                     borderBottomLeftRadius: 0,
@@ -434,10 +444,45 @@ export default function App() {
                 />
               </Button>
             )}
+            <nav className="forecast-views" aria-label="Forecast views">
+              <button
+                type="button"
+                aria-pressed={!showMinutes}
+                onClick={() => setPanelView("overview")}
+              >
+                Overview
+              </button>
+              <button
+                type="button"
+                aria-pressed={showMinutes}
+                disabled={!firstHour}
+                onClick={() => setPanelView("minutes")}
+              >
+                Minute explorer
+              </button>
+            </nav>
+            {showMinutes && (
+              <Outlook
+                key={key(point) + ":" + firstHour.t}
+                hours={data.hours}
+                start={firstHour.t}
+                initialMinute={Math.max(
+                  0,
+                  Math.min(59, Math.floor((referenceTime - firstHour.t) / 60)),
+                )}
+                zone={data.zone}
+                f={unit}
+                point={point}
+                saved={data === seed || state === "offline"}
+              />
+            )}
             <div
               className="stack scroll"
               key={key(point)}
-              style={{ paddingBottom: 12 }}
+              style={{
+                paddingBottom: 12,
+                display: showMinutes ? "none" : undefined,
+              }}
             >
               <div
                 className="stack"
@@ -487,91 +532,26 @@ export default function App() {
                 <div className="stack">
                   <AtlasText
                     face="display"
-                    size={31}
+                    size={small ? 34 : 38}
                     style={{ letterSpacing: -0.6 }}
                   >
                     {point.name}
                   </AtlasText>
-                  <AtlasText color={sub} size={14}>
+                  <AtlasText color={sub} size={17}>
                     {point.region}
                   </AtlasText>
-                  <AtlasText
-                    face="mono"
-                    color={sub}
-                    size={10}
-                    style={{ marginTop: 6, letterSpacing: 0.5 }}
-                  >
-                    {coords(point)}
-                  </AtlasText>
+                  {!point.resolveName && (
+                    <AtlasText
+                      face="mono"
+                      color={sub}
+                      size={13}
+                      style={{ marginTop: 6, letterSpacing: 0.5 }}
+                    >
+                      {coords(point)}
+                    </AtlasText>
+                  )}
                 </div>
-                {h ? (
-                  <>
-                    <div
-                      className="stack"
-                      style={{ ...row, justifyContent: "space-between" }}
-                    >
-                      <div className="stack">
-                        <AtlasText
-                          face="display"
-                          size={54}
-                          style={{ letterSpacing: -1.5 }}
-                        >
-                          {temp(h.c, unit)}°
-                          <AtlasText size={24} face="sans" color={sub}>
-                            {unit ? "F" : "C"}
-                          </AtlasText>
-                        </AtlasText>
-                        <AtlasText size={15} face="bold">
-                          {h.desc}
-                        </AtlasText>
-                      </div>
-                      <WeatherArt desc={h.desc} day={h.day} size={89} />
-                    </div>
-                    <div
-                      className="stack"
-                      style={{
-                        ...row,
-                        borderBottomWidth: 1,
-                        borderColor: line,
-                        paddingBottom: 10,
-                        gap: 10,
-                      }}
-                    >
-                      <AtlasText color={sub} size={11}>
-                        24h range
-                      </AtlasText>
-                      <AtlasText face="mono" size={11}>
-                        ↑ {Math.max(...nextDay)}° ↓ {Math.min(...nextDay)}°
-                      </AtlasText>
-                    </div>
-                    <div
-                      className="stack"
-                      style={{
-                        flexDirection: "row",
-                        flexWrap: "wrap",
-                        rowGap: 10,
-                      }}
-                    >
-                      {metrics.map(([ic, n, v]) => (
-                        <div
-                          className="stack"
-                          key={n}
-                          style={{ width: "50%", ...row, gap: 8 }}
-                        >
-                          <Icon name={ic} size={16} color={sub} />
-                          <div className="stack">
-                            <AtlasText size={10} color={sub}>
-                              {n}
-                            </AtlasText>
-                            <AtlasText face="bold" size={13}>
-                              {v}
-                            </AtlasText>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : (
+                {!data && (
                   <div className="stack" style={{ paddingBlock: 26 }}>
                     {state === "loading" ? (
                       <span
@@ -600,35 +580,41 @@ export default function App() {
                         state === "live" ? "var(--green)" : "var(--peach)",
                     }}
                   />
-                  <AtlasText size={10} color={sub}>
+                  <AtlasText size={13} color={sub}>
                     {data?.source || "Point forecast"}
-                    {!future.length && h
-                      ? " · archived forecast"
-                      : state === "live"
-                        ? ""
-                        : state === "offline"
-                          ? h
-                            ? " · saved forecast"
-                            : " · offline"
-                          : " · updating"}
-                    {date ? "  ·  " + date + "  " + clock : ""}
+                    {data === seed
+                      ? " · saved forecast"
+                      : state === "offline"
+                        ? data
+                          ? " · saved forecast"
+                          : " · offline"
+                        : state === "loading"
+                          ? " · updating"
+                          : ""}
                   </AtlasText>
                   {state === "offline" && (
                     <Button onClick={() => setRetry((v) => v + 1)}>
-                      <AtlasText size={11} color={accent}>
+                      <AtlasText size={14} color={accent}>
                         Retry
                       </AtlasText>
                     </Button>
                   )}
                 </div>
               </div>
-              {data && h && <Outlook hours={hours} zone={data.zone} f={unit} />}
+              {data && (
+                <DailyForecast
+                  point={point}
+                  forecast={data}
+                  fahrenheit={unit}
+                  saved={data === seed || state === "offline"}
+                />
+              )}
               <Button
                 onClick={() => setModal("sources")}
                 style={{ paddingBlock: 8 }}
               >
                 <Icon name="info" size={12} />
-                <AtlasText size={11} color={sub}>
+                <AtlasText size={14} color={sub}>
                   Data & map sources
                 </AtlasText>
               </Button>
@@ -650,12 +636,12 @@ export default function App() {
             }}
           >
             <Icon name="map-pin" size={13} color={accent} />
-            <AtlasText size={13} face="bold">
+            <AtlasText size={16} face="bold">
               {point.name}
             </AtlasText>
-            {h && (
-              <AtlasText size={12}>
-                {temp(h.c, unit)}° · {h.desc}
+            {current && (
+              <AtlasText size={14}>
+                {temp(current.c, unit)}° · {current.desc}
               </AtlasText>
             )}
             <Icon name="chevron-up" size={14} />
@@ -758,14 +744,14 @@ export default function App() {
           <div className="stack scroll">
             {[
               [
-                "National Weather Service",
-                "Hourly point forecasts in supported US areas.",
-                "https://www.weather.gov/documentation/services-web-api",
+                "Open-Meteo",
+                "Current conditions, hourly and daily forecasts, and place search (GeoNames). Weather data licensed CC BY 4.0. Free API for non-commercial use.",
+                "https://open-meteo.com/",
               ],
               [
-                "Open-Meteo",
-                "Global hourly forecasts and place search (GeoNames). Weather data licensed CC BY 4.0. Free API for non-commercial use.",
-                "https://open-meteo.com/",
+                "Photon",
+                "Location names for selected coordinates use © OpenStreetMap contributors via komoot’s Photon service.",
+                "https://photon.komoot.io/",
               ],
               [
                 "Hipparcos star catalogue",

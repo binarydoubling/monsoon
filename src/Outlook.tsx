@@ -1,504 +1,497 @@
-import React, { useState, useRef, useEffect } from "react";
 import {
-  AtlasText,
-  Button,
-  Icon,
-  Label,
-  WeatherArt,
-  sub,
-  card,
-  accent,
-  line,
-  row,
-  box,
-} from "./ui";
-import { local, wind } from "./weather";
-import type { ForecastHour } from "./weather";
+  lazy,
+  Suspense,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { PointerEvent } from "react";
+import Conditions from "./Conditions";
+import { forecastMinute } from "./minute";
+import { Button, Icon, WeatherArt } from "./ui";
+import type { ForecastHour, Place } from "./weather";
 
-const gestureStyle = {
-  position: "absolute",
-  inset: 0,
-  touchAction: "pan-y",
-  cursor: "pointer",
-} as const;
+const ForecastSky = lazy(() => import("./ForecastSky"));
 
-const metrics = [
-  ["Temperature", "thermometer"],
-  ["Precipitation", "droplet"],
-  ["Wind", "wind"],
-] as const;
+const pixelsPerMinute = 4;
+const metrics = ["Temperature", "Precipitation", "Wind"] as const;
+type Metric = (typeof metrics)[number];
+
+function measurement(
+  hour: ForecastHour | undefined,
+  metric: Metric,
+  fahrenheit: boolean,
+) {
+  if (!hour) return null;
+  if (metric === "Temperature") return fahrenheit ? hour.c * 1.8 + 32 : hour.c;
+  if (metric === "Precipitation") return hour.rain;
+  return hour.kmh == null ? null : hour.kmh / (fahrenheit ? 1.609344 : 1);
+}
 
 export default function Outlook({
   hours,
+  start,
+  initialMinute,
   zone,
   f,
+  point,
+  saved,
 }: {
   hours: ForecastHour[];
+  start: number;
+  initialMinute: number;
   zone: string;
   f: boolean;
+  point: Place;
+  saved: boolean;
 }) {
-  const [duration, setDuration] = useState(24),
-    [metric, setMetric] = useState(0),
-    [index, setIndex] = useState(0),
-    [width, setWidth] = useState(340);
+  const lastMinute = Math.max(
+    0,
+    Math.floor(((hours.at(-1)?.t ?? start) - start) / 60),
+  );
 
-  const chart = useRef<HTMLDivElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
+  const plot = useRef<HTMLDivElement>(null);
+  const stage = useRef<HTMLElement>(null);
+  const [minute, setMinute] = useState(Math.min(initialMinute, lastMinute));
+  const [metric, setMetric] = useState<Metric>("Temperature");
+  const [width, setWidth] = useState(400);
 
-  useEffect(() => {
-    if (!chart.current) return;
+  useLayoutEffect(() => {
+    const el = viewport.current;
+    const graph = plot.current;
+    const contents = stage.current;
+    if (!el || !graph || !contents) return;
+    el.scrollTop = initialMinute * pixelsPerMinute;
 
-    const observer = new ResizeObserver(([entry]) =>
-      setWidth(Math.max(90, entry.contentRect.width)),
-    );
+    const resize = new ResizeObserver(() => {
+      setWidth(graph.clientWidth);
+      // Short windows reveal the whole inspector before it pins against the bottom.
+      const overflow = Math.max(0, contents.offsetHeight - el.clientHeight);
+      el.style.setProperty("--stage-overflow", overflow + "px");
+    });
 
-    observer.observe(chart.current);
-    return () => observer.disconnect();
-  }, []);
+    resize.observe(contents);
+    resize.observe(el);
+    resize.observe(graph);
 
-  const small = width < 540;
-  const data = hours.slice(0, duration);
-  if (!data.length) return null;
+    const horizontalScroll = (event: WheelEvent) => {
+      if (event.ctrlKey || event.metaKey) return;
+
+      if (!event.shiftKey && Math.abs(event.deltaX) <= Math.abs(event.deltaY))
+        return;
+
+      event.preventDefault();
+
+      const scale =
+        event.deltaMode === 1
+          ? 16
+          : event.deltaMode === 2
+            ? el.clientHeight
+            : 1;
+
+      el.scrollTop += (event.deltaX || event.deltaY) * scale;
+    };
+
+    el.addEventListener("wheel", horizontalScroll, { passive: false });
+
+    return () => {
+      resize.disconnect();
+      el.removeEventListener("wheel", horizontalScroll);
+    };
+  }, [initialMinute]);
+
+  function selectMinute(value: number) {
+    const next = Math.max(0, Math.min(lastMinute, Math.round(value)));
+    if (viewport.current) viewport.current.scrollTop = next * pixelsPerMinute;
+    setMinute(next);
+  }
+
+  const selected = forecastMinute(hours, start, minute);
+
+  const formatTime = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: zone,
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        timeZoneName: "short",
+      }),
+    [zone],
+  );
+
+  const clock = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: zone,
+        hour: "numeric",
+        minute: "2-digit",
+      }),
+    [zone],
+  );
+
+  const selectedTime = formatTime.format(selected.t * 1000);
+
+  const left = 40,
+    right = Math.max(left + 1, width - 12),
+    top = 33,
+    bottom = 118;
+
+  const x = (m: number) =>
+    left + ((right - left) * m) / Math.max(1, lastMinute);
 
   const unit =
-    metric === 0
+    metric === "Temperature"
       ? f
         ? "°F"
         : "°C"
-      : metric === 1
-        ? "%"
-        : f
+      : metric === "Wind"
+        ? f
           ? " mph"
-          : " km/h";
+          : " km/h"
+        : "%";
 
-  const vals = data.map((h) =>
-    metric === 0
-      ? Math.round((f ? (h.c * 9) / 5 + 32 : h.c) * 10) / 10
-      : metric === 1
-        ? h.rain
-        : h.kmh == null
-          ? null
-          : wind(h.kmh, f),
+  const color =
+    metric === "Temperature"
+      ? "var(--mauve)"
+      : metric === "Wind"
+        ? "var(--teal)"
+        : "var(--blue)";
+
+  const samples = useMemo(
+    () =>
+      Array.from({ length: Math.ceil(lastMinute / 60) + 1 }, (_, i) => {
+        const offset = Math.min(i * 60, lastMinute);
+        const { hour } = forecastMinute(hours, start, offset);
+        return { offset, value: measurement(hour, metric, f) };
+      }),
+    [hours, start, metric, f, lastMinute],
   );
 
-  const valid = vals.filter(
-      (v): v is number => v !== null && Number.isFinite(v),
-    ),
-    min = Math.min(...valid),
-    max = Math.max(...valid);
+  const values = samples.flatMap(({ value }) => (value == null ? [] : [value]));
+  const min = values.length ? Math.min(...values) : 0;
+  const max = values.length ? Math.max(...values) : 1;
+  const step = Math.max(1, Math.ceil((max - min) / 3));
+  const floor = Math.floor(min / step) * step - step;
+  const ceiling = Math.ceil(max / step) * step + step;
 
-  const tick = Math.max(1, Math.ceil((max - min) / 3)),
-    floor = Number.isFinite(min) ? Math.floor(min / tick) * tick - tick : 0,
-    ceiling = Number.isFinite(max) ? Math.ceil(max / tick) * tick + tick : 3;
+  const y = (v: number) =>
+    bottom - ((bottom - top) * (v - floor)) / (ceiling - floor);
 
-  const left = 36,
-    end = width - 15,
-    top = 12,
-    bottom = 110;
+  const segments: { offset: number; value: number }[][] = [];
+  let segment: { offset: number; value: number }[] = [];
 
-  const x = (i: number) =>
-      left + ((end - left) * i) / Math.max(1, vals.length - 1),
-    y = (v: number) =>
-      bottom - ((v - floor) / (ceiling - floor)) * (bottom - top);
-
-  const idx = Math.min(index, data.length - 1),
-    h = data[idx],
-    clock = (t: number) =>
-      local(t, zone, { hour: "numeric" }).toLowerCase().replace(" ", "");
-
-  const pick = (e: React.PointerEvent<HTMLDivElement>) =>
-    setIndex(
-      Math.max(
-        0,
-        Math.min(
-          data.length - 1,
-          Math.round(
-            ((e.clientX - e.currentTarget.getBoundingClientRect().left - left) /
-              (end - left)) *
-              (data.length - 1),
-          ),
-        ),
-      ),
-    );
-
-  const segments: [number, number][][] = [];
-  let seg: [number, number][] = [];
-
-  vals.forEach((v, i) => {
-    if (v !== null && Number.isFinite(v)) seg.push([x(i), y(v)]);
-    else if (seg.length) {
-      segments.push(seg);
-      seg = [];
+  for (const { offset, value } of samples) {
+    if (value == null) {
+      segment = [];
+      continue;
     }
-  });
 
-  if (seg.length) segments.push(seg);
-  const color = ["var(--peach)", "var(--blue)", "var(--teal)"][metric];
+    if (!segment.length) segments.push(segment);
+    segment.push({ offset, value });
+  }
 
-  const peak = vals.indexOf(max),
-    low = vals.indexOf(min);
+  const value = measurement(selected.hour, metric, f);
 
-  const stamp = (i: number) =>
-    local(data[i].t, zone, { weekday: "short", hour: "numeric" }).replace(
-      ",",
-      "",
-    );
+  const tickCount = Math.min(lastMinute + 1, width < 440 ? 4 : 5);
 
-  const weatherChange = data.findIndex((v) => v.desc !== data[0].desc);
-
-  const skyStory =
-    weatherChange > 0
-      ? " " + data[weatherChange].desc + " by " + stamp(weatherChange) + "."
-      : "";
-
-  const narrative =
-    valid.length === 0
-      ? "Hourly values are unavailable for this variable."
-      : min === max
-        ? "Holding near " +
-          min +
-          unit +
-          " throughout the next " +
-          data.length +
-          " hours."
-        : metric === 0
-          ? "Temperatures " +
-            (peak < low ? "fall from " : "rise from ") +
-            (peak < low ? max : min) +
-            "° at " +
-            stamp(peak < low ? peak : low) +
-            " to " +
-            (peak < low ? min : max) +
-            "° at " +
-            stamp(peak < low ? low : peak) +
-            "."
-          : metric === 1
-            ? "Precipitation chance peaks at " +
-              max +
-              "% around " +
-              stamp(peak) +
-              "."
-            : "The strongest winds reach " +
-              max +
-              unit +
-              " around " +
-              stamp(peak) +
-              ".";
-
-  const slots = Array.from(
-    { length: Math.min(small ? 3 : 4, data.length) },
-    (_, i) =>
-      Math.floor((i * data.length) / Math.min(small ? 3 : 4, data.length)),
+  const ticks = Array.from({ length: tickCount }, (_, i) =>
+    Math.round((lastMinute * i) / Math.max(1, tickCount - 1)),
   );
+
+  const weekday = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-US", { timeZone: zone, weekday: "short" }),
+    [zone],
+  );
+
+  const dayAt = (m: number) => weekday.format((start + m * 60) * 1000);
+  const timeAt = (m: number) => clock.format((start + m * 60) * 1000);
+  const minAt = samples.find((s) => s.value === min);
+  const maxAt = samples.find((s) => s.value === max);
+  const pretty = (v: number) => Number(v.toFixed(1)) + unit;
+
+  const extremes =
+    minAt && maxAt ? [minAt, maxAt].sort((a, b) => a.offset - b.offset) : [];
+
+  function pick(event: PointerEvent<HTMLDivElement>) {
+    const pos =
+      event.clientX - event.currentTarget.getBoundingClientRect().left;
+
+    selectMinute(((pos - left) / (right - left)) * lastMinute);
+  }
 
   return (
     <div
-      className="stack"
-      style={{ borderTopWidth: 1, borderColor: line, padding: 16, gap: 13 }}
+      className="minute-scroll"
+      aria-label="Minute explorer timeline"
+      ref={viewport}
+      onScroll={(event) => {
+        if (event.target === event.currentTarget)
+          setMinute(
+            Math.min(
+              lastMinute,
+              Math.round(event.currentTarget.scrollTop / pixelsPerMinute),
+            ),
+          );
+      }}
     >
-      <div
-        className="stack"
-        style={{
-          ...row,
-          justifyContent: "space-between",
-          gap: 8,
-          flexWrap: "wrap",
-        }}
+      <section
+        ref={stage}
+        className="minute-stage"
+        aria-label="Minute forecast"
       >
-        <div className="stack" style={{ ...row, gap: 10 }}>
-          <Icon name="activity" size={23} color={accent} />
-          <AtlasText face="display" size={small ? 20 : 22}>
-            Hourly outlook
-          </AtlasText>
+        <Suspense fallback={null}>
+          <ForecastSky t={selected.t} point={point} hour={selected.hour} />
+        </Suspense>
+        <div className="minute-heading">
+          <h2 className="display">{point.name}</h2>
+          {saved && <small>Saved forecast</small>}
         </div>
-        <div
-          className="stack"
-          style={{
-            ...row,
-            borderWidth: 1,
-            borderColor: line,
-            borderRadius: 5,
-            padding: 2,
-          }}
+        <Conditions
+          t={selected.t}
+          hour={selected.hour}
+          label="Selected minute conditions"
+          point={point}
+          zone={zone}
+          fahrenheit={f}
         >
-          {[24, 48].map((n) => (
+          <div className="minute-arrows">
             <Button
-              key={n}
-              aria-pressed={duration === n}
-              onClick={() => {
-                setDuration(n);
-                setIndex(0);
-              }}
-              style={{
-                paddingInline: small ? 9 : 13,
-                paddingBlock: 5,
-                borderRadius: 3,
-                backgroundColor: duration === n ? accent : "transparent",
-              }}
+              className="control hour-step"
+              label="Previous minute"
+              disabled={minute === 0}
+              onClick={() => selectMinute(minute - 1)}
             >
-              <AtlasText
-                face="mono"
-                size={11}
-                color={duration === n ? card : sub}
-              >
-                {n}h
-              </AtlasText>
+              <Icon name="chevron-left" size={20} />
             </Button>
+            <Button
+              className="control hour-step"
+              label="Next minute"
+              disabled={minute === lastMinute}
+              onClick={() => selectMinute(minute + 1)}
+            >
+              <Icon name="chevron-right" size={20} />
+            </Button>
+          </div>
+        </Conditions>
+        <div className="minute-metrics" aria-label="Chart variable">
+          {metrics.map((name) => (
+            <button
+              type="button"
+              key={name}
+              aria-pressed={name === metric}
+              style={{ borderColor: name === metric ? color : undefined }}
+              onClick={() => setMetric(name)}
+            >
+              {name}
+            </button>
           ))}
         </div>
-      </div>
-      <div
-        className="stack"
-        style={{ ...row, gap: small ? 5 : 8, flexWrap: "wrap" }}
-      >
-        {metrics.map(([n, ic], i) => (
-          <Button
-            key={n}
-            aria-pressed={i === metric}
-            onClick={() => setMetric(i)}
-            style={{
-              borderWidth: 1,
-              borderColor: i === metric ? color : line,
-              backgroundColor: i === metric ? "var(--surface0)" : "transparent",
-              borderRadius: 20,
-              paddingBlock: 6,
-              paddingInline: small ? 8 : 13,
-            }}
-          >
-            <Icon name={ic} size={13} color={i === metric ? color : sub} />
-            <AtlasText size={small ? 11 : 12} face="bold">
-              {n}
-            </AtlasText>
-          </Button>
-        ))}
-        {!small && (
-          <div className="stack" style={{ marginLeft: "auto" }}>
-            <Label>
-              LOCAL TIME ·{" "}
-              {(zone.split("/").pop() ?? zone)
-                .replaceAll("_", " ")
-                .toUpperCase()}
-            </Label>
-          </div>
-        )}
-      </div>
-      <div
-        className="stack"
-        style={{ ...row, borderTopWidth: 1, borderColor: line, paddingTop: 12 }}
-      >
-        {slots.map((i, j) => (
-          <Button
-            label={"Inspect " + stamp(i)}
-            key={i}
-            onClick={() => setIndex(i)}
-            style={{
-              flex: 1,
-              justifyContent: "flex-start",
-              alignItems: "center",
-              gap: small ? 3 : 8,
-              paddingRight: 3,
-            }}
-          >
-            <WeatherArt
-              desc={data[i].desc}
-              day={data[i].day}
-              size={small ? 27 : 35}
-            />
-            <div className="stack" style={{ flex: 1 }}>
-              <AtlasText face="mono" size={small ? 9 : 10} color={sub}>
-                {stamp(i).toUpperCase()}
-              </AtlasText>
-              <AtlasText size={small ? 11 : 13} numberOfLines={2}>
-                {data[i].desc}
-              </AtlasText>
-            </div>
-          </Button>
-        ))}
-      </div>
-      <div className="stack" ref={chart} style={{ height: 141 }}>
-        <svg width="100%" height="141" pointerEvents="none">
-          <defs>
-            <linearGradient id="area" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0" stopColor={color} stopOpacity=".3" />
-              <stop offset="1" stopColor={color} stopOpacity=".035" />
-            </linearGradient>
-          </defs>
-          {Array.from({ length: 4 }, (_, i) => {
-            const yy = top + (i * (bottom - top)) / 3;
+        <div
+          className="minute-graph"
+          ref={plot}
+          role="slider"
+          tabIndex={0}
+          aria-label="Forecast minute"
+          aria-valuemin={0}
+          aria-valuemax={lastMinute}
+          aria-valuenow={minute}
+          aria-valuetext={
+            selectedTime +
+            " · " +
+            (value == null ? "Unavailable" : pretty(value))
+          }
+          onPointerEnter={(e) => {
+            if (e.pointerType === "mouse") pick(e);
+          }}
+          onPointerDown={(e) => {
+            e.currentTarget.setPointerCapture(e.pointerId);
+            pick(e);
+          }}
+          onPointerMove={(e) => {
+            if (
+              e.pointerType !== "touch" ||
+              e.currentTarget.hasPointerCapture(e.pointerId)
+            )
+              pick(e);
+          }}
+          onKeyDown={(e) => {
+            const keys: Record<string, number> = {
+              ArrowLeft: minute - 1,
+              ArrowRight: minute + 1,
+              ArrowDown: minute - 1,
+              ArrowUp: minute + 1,
+              PageDown: minute + 60,
+              PageUp: minute - 60,
+              Home: 0,
+              End: lastMinute,
+            };
 
-            return (
-              <g key={i}>
+            if (keys[e.key] == null) return;
+            e.preventDefault();
+            selectMinute(keys[e.key]);
+          }}
+        >
+          <svg width="100%" height="182" aria-hidden="true">
+            <defs>
+              <linearGradient id="area" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0" stopColor={color} stopOpacity=".3" />
+                <stop offset="1" stopColor={color} stopOpacity=".035" />
+              </linearGradient>
+            </defs>
+            {[floor, (ceiling + floor) / 2, ceiling].map((v) => (
+              <g key={v}>
                 <line
                   x1={left}
-                  y1={yy}
-                  x2={end}
-                  y2={yy}
-                  stroke={line}
+                  y1={y(v)}
+                  x2={right}
+                  y2={y(v)}
+                  stroke="var(--surface1)"
                   strokeDasharray="3 4"
                 />
-                <text
-                  x={left - 8}
-                  y={yy + 3}
-                  textAnchor="end"
-                  fill={sub}
-                  fontSize="10"
-                >
-                  {Math.round(ceiling - ((ceiling - floor) * i) / 3)}
-                  {metric === 0 ? "°" : metric === 1 ? "%" : ""}
+                <text x={left - 6} y={y(v) + 4} textAnchor="end">
+                  {Math.round(v)}
+                  {metric === "Temperature"
+                    ? "°"
+                    : metric === "Precipitation"
+                      ? "%"
+                      : ""}
                 </text>
               </g>
-            );
-          })}
-          {segments.map((s, i) => {
-            const path = s
-              .map(([a, b], j) => {
-                if (!j) return "M" + a + " " + b;
-                const mid = (a + s[j - 1][0]) / 2;
+            ))}
+            {segments.map((s) => {
+              const first = s[0],
+                last = s[s.length - 1];
 
+              if (s.length === 1)
                 return (
-                  "C" +
-                  mid +
-                  " " +
-                  s[j - 1][1] +
-                  " " +
-                  mid +
-                  " " +
-                  b +
-                  " " +
-                  a +
-                  " " +
-                  b
-                );
-              })
-              .join(" ");
-
-            return (
-              <g key={i}>
-                <path
-                  d={
-                    path +
-                    " L" +
-                    s[s.length - 1][0] +
-                    " " +
-                    bottom +
-                    " L" +
-                    s[0][0] +
-                    " " +
-                    bottom +
-                    " Z"
-                  }
-                  fill="url(#area)"
-                />
-                <path
-                  d={path}
-                  fill="none"
-                  stroke={color}
-                  strokeWidth={2.7}
-                  strokeLinejoin="round"
-                />
-              </g>
-            );
-          })}
-          {data.map((v, i) => {
-            if (
-              i % Math.ceil(data.length / (small ? 5 : 9)) !== 0 &&
-              i !== data.length - 1
-            )
-              return null;
-
-            if (i !== data.length - 1 && data.length - i <= 2) return null;
-
-            return (
-              <g key={i}>
-                {vals[i] != null && (
                   <circle
-                    cx={x(i)}
-                    cy={y(vals[i])}
+                    key={first.offset}
+                    cx={x(first.offset)}
+                    cy={y(first.value)}
                     r={3}
-                    fill={card}
-                    stroke={color}
-                    strokeWidth={1.5}
+                    fill={color}
                   />
-                )}
-                <text
-                  x={x(i)}
-                  y={133}
-                  fontSize={10}
-                  fill={sub}
-                  textAnchor={i === data.length - 1 ? "end" : "middle"}
-                >
-                  {clock(v.t)}
-                </text>
-              </g>
-            );
-          })}
-          {vals[idx] != null && (
-            <g>
-              <line
-                x1={x(idx)}
-                x2={x(idx)}
-                y1={top}
-                y2={bottom}
-                stroke={color}
-                strokeDasharray="3 4"
-              />
+                );
+
+              const path = s
+                .map(
+                  ({ offset, value }, i) =>
+                    (i ? "L" : "M") + x(offset) + " " + y(value),
+                )
+                .join(" ");
+
+              return (
+                <g key={first.offset}>
+                  <path
+                    d={
+                      path +
+                      " L" +
+                      x(last.offset) +
+                      " " +
+                      bottom +
+                      " L" +
+                      x(first.offset) +
+                      " " +
+                      bottom +
+                      " Z"
+                    }
+                    fill="url(#area)"
+                  />
+                  <path
+                    d={path}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth={2.7}
+                    strokeLinejoin="round"
+                  />
+                </g>
+              );
+            })}
+            {ticks.map((m) => {
+              const hour = forecastMinute(hours, start, m).hour;
+              const labelX = Math.max(left, Math.min(right - 17, x(m)));
+
+              return (
+                <g key={m}>
+                  {hour && (
+                    <svg x={labelX - 11} y={123} width={22} height={20}>
+                      <WeatherArt desc={hour.desc} day={hour.day} size={22} />
+                    </svg>
+                  )}
+                  <text x={labelX} y={158} textAnchor="middle">
+                    {dayAt(m)}
+                    <tspan x={labelX} dy="15">
+                      {timeAt(m)}
+                    </tspan>
+                  </text>
+                </g>
+              );
+            })}
+            <line
+              x1={x(minute)}
+              x2={x(minute)}
+              y1={24}
+              y2={bottom}
+              stroke={color}
+              strokeDasharray="3 4"
+            />
+            {value != null && (
               <circle
-                cx={x(idx)}
-                cy={y(vals[idx])}
+                cx={x(minute)}
+                cy={y(value)}
                 r={5}
                 fill={color}
-                stroke={card}
+                stroke="var(--mantle)"
                 strokeWidth={2}
               />
+            )}
+            <g
+              className="cursor-time"
+              transform={`translate(${Math.max(left + 2, Math.min(width - 45, x(minute)))}, 1)`}
+            >
+              <rect x="-40" y="0" width="80" height="23" rx="5" fill={color} />
+              <text textAnchor="middle" y="16">
+                {timeAt(minute)}
+              </text>
             </g>
-          )}
-        </svg>
-        <div
-          className="stack"
-          onPointerDown={(event) => {
-            event.currentTarget.setPointerCapture(event.pointerId);
-            pick(event);
-          }}
-          onPointerMove={(event) => {
-            if (event.currentTarget.hasPointerCapture(event.pointerId))
-              pick(event);
-          }}
-          style={gestureStyle}
-        />
-      </div>
-      <div
-        className="stack"
-        style={{
-          ...row,
-          gap: 10,
-          borderTopWidth: 1,
-          borderColor: line,
-          paddingTop: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <div className="stack" style={{ ...row, gap: 6 }}>
-          <Button
-            label="Previous hour"
-            onClick={() => setIndex(Math.max(0, idx - 1))}
-          >
-            <Icon name="chevron-left" size={16} />
-          </Button>
-          <AtlasText face="mono" size={11}>
-            {clock(h.t).toUpperCase()} · {vals[idx] ?? "—"}
-            {unit}
-          </AtlasText>
-          <Button
-            label="Next hour"
-            onClick={() => setIndex(Math.min(data.length - 1, idx + 1))}
-          >
-            <Icon name="chevron-right" size={16} />
-          </Button>
+          </svg>
         </div>
-        <AtlasText size={13} color={sub} style={{ flexGrow: 1 }}>
-          {narrative}
-          {skyStory}
-        </AtlasText>
-      </div>
+        {extremes.length > 0 && (
+          <p className="minute-story">
+            {min === max
+              ? metric +
+                " holds near " +
+                pretty(min) +
+                " across the available hours."
+              : metric +
+                (extremes[0] === minAt ? " rises from " : " falls from ") +
+                pretty(extremes[0].value!) +
+                " at " +
+                dayAt(extremes[0].offset) +
+                " " +
+                timeAt(extremes[0].offset) +
+                " to " +
+                pretty(extremes[1].value!) +
+                " at " +
+                dayAt(extremes[1].offset) +
+                " " +
+                timeAt(extremes[1].offset) +
+                "."}
+          </p>
+        )}
+      </section>
+      <div
+        aria-hidden="true"
+        style={{
+          height: `calc(${lastMinute * pixelsPerMinute}px - var(--stage-overflow, 0px))`,
+        }}
+      />
     </div>
   );
 }

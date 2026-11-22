@@ -1,4 +1,4 @@
-import snapshot from "./reykjavik.json";
+import snapshot from "./reykjavik.json" with { type: "json" };
 
 export interface Coordinates {
   lat: number;
@@ -8,6 +8,7 @@ export interface Coordinates {
 export interface Place extends Coordinates {
   name: string;
   region: string;
+  resolveName?: boolean;
 }
 
 export interface ForecastHour {
@@ -18,43 +19,62 @@ export interface ForecastHour {
   kmh: number | null;
   dir: number | null;
   pressure?: number | null;
+  cloudCover?: number | null;
   desc: string;
   day: boolean;
 }
 
+export interface ForecastDay {
+  date: string;
+  high: number | null;
+  low: number | null;
+  rain: number | null;
+  desc: string;
+}
+
 export interface Forecast {
-  source: "NWS" | "Open-Meteo";
+  source: "Open-Meteo";
   zone: string;
+  current: ForecastHour | null;
+  daily: ForecastDay[];
   hours: ForecastHour[];
 }
 
-type MeteoResponse = {
-  timezone: string;
-  hourly: { time: number[] } & Record<
-    Exclude<keyof typeof snapshot.hourly, "time">,
-    (number | null)[]
-  >;
+const weatherVariables = [
+  "temperature_2m",
+  "relative_humidity_2m",
+  "precipitation_probability",
+  "wind_speed_10m",
+  "wind_direction_10m",
+  "weather_code",
+  "surface_pressure",
+  "is_day",
+  "cloud_cover",
+] as const;
+
+const dailyVariables = [
+  "temperature_2m_max",
+  "temperature_2m_min",
+  "weather_code",
+  "precipitation_probability_max",
+] as const;
+
+type WeatherVariable = (typeof weatherVariables)[number];
+
+type WeatherValues<T> = Record<Exclude<WeatherVariable, "cloud_cover">, T> & {
+  cloud_cover?: T;
 };
 
-interface NwsPoint {
-  properties: { timeZone: string; forecastHourly: string };
-}
-
-interface NwsHourly {
-  properties: {
-    periods: {
-      temperature: number | null;
-      temperatureUnit: string;
-      startTime: string;
-      shortForecast: string;
-      isDaytime: boolean;
-      windSpeed: string;
-      windDirection: string;
-      relativeHumidity?: { value: number | null };
-      probabilityOfPrecipitation?: { value: number | null };
-    }[];
-  };
-}
+type MeteoResponse = {
+  timezone: string;
+  utc_offset_seconds: number;
+  current?: { time: number } & WeatherValues<number | null>;
+  daily?: { time: number[] } & Record<
+    (typeof dailyVariables)[number],
+    (number | null)[]
+  >;
+  hourly: { time: number[] } & WeatherValues<(number | null)[]>;
+};
 
 export const home: Place = {
   name: "Reykjavík",
@@ -84,6 +104,14 @@ export const coords = (p: Coordinates) =>
 export const key = (p: Coordinates) =>
   p.lat.toFixed(4) + "," + p.lon.toFixed(4);
 
+export const coordinatePlace = (p: Coordinates): Place => ({
+  lat: p.lat,
+  lon: p.lon,
+  name: coords(p),
+  region: "Selected coordinates",
+  resolveName: true,
+});
+
 export function condition(n: number | null) {
   if (n == null) return "Conditions unavailable";
   if (n === 0) return "Clear skies";
@@ -101,8 +129,10 @@ export function condition(n: number | null) {
   return "Thunderstorms";
 }
 
-export const temp = (c: number, f: boolean) =>
-  Math.round(f ? (c * 9) / 5 + 32 : c);
+export function temp(c: number, f: boolean, decimals = 0) {
+  const scale = 10 ** decimals;
+  return Math.round((f ? (c * 9) / 5 + 32 : c) * scale) / scale;
+}
 
 export const wind = (k: number | null, f: boolean) =>
   k === null || !Number.isFinite(k) ? null : Math.round(f ? k / 1.609344 : k);
@@ -143,28 +173,93 @@ export async function getJSON<T>(url: string, signal: AbortSignal): Promise<T> {
   }
 }
 
+type PlaceLabel = Pick<Place, "name" | "region">;
+const placeLabels = new Map<string, PlaceLabel>();
+
+export async function reverseGeocode(p: Coordinates, signal: AbortSignal) {
+  const id = key(p);
+  const cached = placeLabels.get(id);
+  if (cached) return cached;
+
+  const params = new URLSearchParams({
+    lat: String(p.lat),
+    lon: String(p.lon),
+    lang: "en",
+    radius: "3",
+    limit: "1",
+  });
+
+  const result = await getJSON<{
+    features: { properties: Record<string, string | undefined> }[];
+  }>(`https://photon.komoot.io/reverse?${params}`, signal);
+
+  const place = result.features[0]?.properties;
+  if (!place) return;
+
+  const locality =
+    place.city ||
+    (place.osm_key === "place" || place.osm_key === "natural"
+      ? place.name
+      : undefined);
+
+  const name =
+    locality || place.district || place.county || place.state || place.country;
+
+  if (!name) return;
+
+  const region = [...new Set([place.state, place.country])]
+    .filter((part) => part && part !== name)
+    .join(", ");
+
+  const label = { name, region };
+  placeLabels.set(id, label);
+  return label;
+}
+
+function reading(
+  t: number,
+  value: (key: WeatherVariable) => number | null,
+): ForecastHour | null {
+  const c = value("temperature_2m");
+  if (!Number.isFinite(t) || c == null || !Number.isFinite(c)) return null;
+
+  return {
+    t,
+    c,
+    hum: value("relative_humidity_2m"),
+    rain: value("precipitation_probability"),
+    kmh: value("wind_speed_10m"),
+    dir: value("wind_direction_10m"),
+    pressure: value("surface_pressure"),
+    cloudCover: value("cloud_cover"),
+    desc: condition(value("weather_code")),
+    day: value("is_day") === 1,
+  };
+}
+
 function meteo(data: MeteoResponse): Forecast {
-  const h = data.hourly;
+  const { hourly, current, daily } = data;
 
   return {
     source: "Open-Meteo",
     zone: data.timezone,
-    hours: h.time
-      .map((t, i) => ({
-        t,
-        c: h.temperature_2m[i],
-        hum: h.relative_humidity_2m[i],
-        rain: h.precipitation_probability[i],
-        kmh: h.wind_speed_10m[i],
-        dir: h.wind_direction_10m[i],
-        pressure: h.surface_pressure[i],
-        desc: condition(h.weather_code[i]),
-        day: h.is_day[i] === 1,
-      }))
-      .filter(
-        (h): h is typeof h & { c: number } =>
-          h.c !== null && Number.isFinite(h.c),
-      ),
+    current: current
+      ? reading(current.time, (key) => current[key] ?? null)
+      : null,
+    daily:
+      daily?.time.map((t, i) => ({
+        // Open-Meteo aggregates daily values using its fixed response offset, even across DST.
+        date: new Date((t + data.utc_offset_seconds) * 1000)
+          .toISOString()
+          .slice(0, 10),
+        high: daily.temperature_2m_max[i],
+        low: daily.temperature_2m_min[i],
+        rain: daily.precipitation_probability_max[i],
+        desc: condition(daily.weather_code[i]),
+      })) ?? [],
+    hours: hourly.time
+      .map((t, i) => reading(t, (key) => hourly[key]?.[i] ?? null))
+      .filter((h) => h !== null),
   };
 }
 
@@ -172,84 +267,31 @@ export const seed = meteo(snapshot);
 const memo = new Map<string, { at: number; value: Forecast }>();
 
 export async function forecast(
-  p: Place,
+  p: Coordinates,
   signal: AbortSignal,
 ): Promise<Forecast> {
   const id = key(p),
     old = memo.get(id);
 
   if (old && Date.now() - old.at < 15 * 60000) return old.value;
-  let value: Forecast | undefined;
 
-  const us =
-    (p.lat >= 17.5 && p.lat <= 72 && (p.lon < -60 || p.lon > 170)) ||
-    (p.lat > 12 && p.lat < 21 && p.lon > 144 && p.lon < 146) ||
-    (p.lat < -10 && p.lat > -16 && p.lon < -168 && p.lon > -173);
+  const params = new URLSearchParams({
+    latitude: String(p.lat),
+    longitude: String(p.lon),
+    timezone: "auto",
+    timeformat: "unixtime",
+    forecast_days: "7",
+    current: weatherVariables.join(","),
+    daily: dailyVariables.join(","),
+    hourly: weatherVariables.join(","),
+  });
 
-  if (us)
-    try {
-      const meta = (
-        await getJSON<NwsPoint>("https://api.weather.gov/points/" + id, signal)
-      ).properties;
-
-      const data = (await getJSON<NwsHourly>(meta.forecastHourly, signal))
-        .properties;
-
-      const hours = data.periods
-        .filter(
-          (h): h is typeof h & { temperature: number } => h.temperature != null,
-        )
-        .map((h) => ({
-          t: Date.parse(h.startTime) / 1000,
-          c:
-            h.temperatureUnit === "F"
-              ? ((h.temperature - 32) * 5) / 9
-              : h.temperature,
-          desc: h.shortForecast,
-          day: h.isDaytime,
-          kmh:
-            parseFloat(h.windSpeed) *
-            (h.windSpeed.includes("mph") ? 1.609344 : 1),
-          dir:
-            [
-              "N",
-              "NNE",
-              "NE",
-              "ENE",
-              "E",
-              "ESE",
-              "SE",
-              "SSE",
-              "S",
-              "SSW",
-              "SW",
-              "WSW",
-              "W",
-              "WNW",
-              "NW",
-              "NNW",
-            ].indexOf(h.windDirection) * 22.5,
-          hum: h.relativeHumidity?.value ?? null,
-          rain: h.probabilityOfPrecipitation?.value ?? null,
-        }));
-
-      if (hours.some((h) => h.t > Date.now() / 1000))
-        value = { source: "NWS", zone: meta.timeZone, hours };
-    } catch (e) {
-      if (signal.aborted) throw e;
-    }
-
-  if (!value)
-    value = meteo(
-      await getJSON<MeteoResponse>(
-        "https://api.open-meteo.com/v1/forecast?latitude=" +
-          p.lat +
-          "&longitude=" +
-          p.lon +
-          "&timezone=auto&timeformat=unixtime&forecast_days=4&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,wind_speed_10m,wind_direction_10m,weather_code,surface_pressure,is_day",
-        signal,
-      ),
-    );
+  const value = meteo(
+    await getJSON<MeteoResponse>(
+      `https://api.open-meteo.com/v1/forecast?${params}`,
+      signal,
+    ),
+  );
 
   if (!value.hours.some((h) => h.t + 3600 > Date.now() / 1000))
     throw Error("Forecast expired");

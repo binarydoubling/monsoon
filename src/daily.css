@@ -1,0 +1,96 @@
+.daily-overview {
+  container-type: inline-size;
+  padding: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.daily-layout {
+  display: grid;
+  gap: 20px;
+}
+.daily-layout section {
+  min-width: 0;
+}
+.daily-layout h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.daily-week thead,
+.daily-unavailable {
+  color: var(--subtext0);
+}
+.daily-week table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.daily-week th,
+.daily-week td {
+  padding: 5px 4px;
+  text-align: right;
+  white-space: nowrap;
+}
+.daily-week thead th {
+  font-size: 12px;
+  font-weight: 500;
+}
+.daily-week tbody th {
+  font-size: 15px;
+  font-weight: 600;
+}
+.daily-week th:first-child {
+  padding-left: 0;
+  text-align: left;
+}
+.daily-week :is(th, td):last-child {
+  padding-right: 0;
+}
+.daily-week tbody tr + tr {
+  border-top: 1px solid var(--surface0);
+}
+.daily-week .daily-condition-cell {
+  text-align: left;
+  white-space: normal;
+}
+.daily-weather {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  line-height: 1.2;
+}
+.daily-weather svg {
+  display: block;
+}
+.daily-range-cell {
+  width: 22%;
+}
+.daily-low,
+.daily-high {
+  width: 1%;
+  font-size: 15px;
+  font-weight: 600;
+}
+.daily-low {
+  color: var(--lavender);
+}
+.daily-high {
+  color: var(--peach);
+}
+.daily-range {
+  position: relative;
+  display: block;
+  height: 4px;
+  min-width: 36px;
+  border-radius: 2px;
+  background: var(--surface0);
+}
+.daily-range > span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  min-width: 2px;
+  border-radius: inherit;
+  background: linear-gradient(to right, var(--lavender), var(--peach));
+}
+.daily-unavailable {
+  margin: 0;
+}

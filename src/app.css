@@ -79,6 +79,16 @@ body,
   outline: 2px solid var(--mauve);
   outline-offset: -2px;
 }
+.hour-step {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--surface1);
+  border-radius: 6px;
+}
+.hour-step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 .control svg {
   flex-shrink: 0;
 }
@@ -130,5 +140,167 @@ body,
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+.hour-details {
+  font-variant-numeric: tabular-nums;
+}
+.hour-details dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 8px 12px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--surface1);
+}
+.hour-details dt {
+  color: var(--subtext0);
+  font-size: 13px;
+}
+.hour-details dd {
+  margin: 2px 0 0;
+  font-weight: 650;
+  font-size: 20px;
+}
+[role="slider"]:focus-visible {
+  outline: 2px solid var(--lavender);
+  outline-offset: -2px;
+}
+
+.forecast-views {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  flex-shrink: 0;
+  display: flex;
+  border-bottom: 1px solid var(--surface1);
+  background: var(--mantle);
+}
+.forecast-views button,
+.minute-metrics button {
+  appearance: none;
+  background: transparent;
+  color: var(--subtext0);
+  cursor: pointer;
+  font: 600 14px var(--font-body);
+}
+.forecast-views button {
+  flex: 1;
+  padding: 13px 4px 11px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+}
+.forecast-views button[aria-pressed="true"] {
+  border-bottom-color: var(--mauve);
+  color: var(--mauve);
+}
+.forecast-views button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.forecast-views button:focus-visible,
+.minute-metrics button:focus-visible {
+  outline: 2px solid var(--lavender);
+  outline-offset: -3px;
+}
+.minute-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
+  scrollbar-color: var(--surface1) var(--mantle);
+}
+.minute-stage {
+  box-sizing: border-box;
+  position: sticky;
+  top: calc(-1 * var(--stage-overflow, 0px));
+  width: 100%;
+  min-height: 100%;
+  padding: 16px;
+  background: var(--mantle);
+}
+.minute-heading h2 {
+  margin: 0;
+  font-size: 26px;
+  overflow-wrap: anywhere;
+}
+.minute-arrows,
+.minute-metrics {
+  display: flex;
+  gap: 6px;
+}
+.minute-metrics {
+  margin: 16px 0 8px;
+  flex-wrap: wrap;
+}
+.minute-metrics button {
+  border: 1px solid var(--surface1);
+  border-radius: 20px;
+  padding: 6px 12px;
+}
+.minute-metrics button[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--surface0);
+}
+.minute-graph {
+  touch-action: pan-y;
+  cursor: crosshair;
+}
+.minute-graph svg {
+  display: block;
+  pointer-events: none;
+}
+.minute-graph text {
+  font: 12px var(--font-body);
+  fill: var(--subtext0);
+}
+.minute-story {
+  padding-top: 12px;
+  border-top: 1px solid var(--surface1);
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.45;
+}
+
+.minute-stage {
+  isolation: isolate;
+}
+.forecast-sky {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 auto;
+  height: 330px;
+  overflow: hidden;
+  pointer-events: none;
+  mask-image: linear-gradient(to bottom, black 64%, transparent 100%);
+}
+.forecast-sky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(17, 17, 27, 0.86),
+    rgba(17, 17, 27, 0.45) 42%,
+    transparent 78%
+  );
+}
+.minute-heading {
+  text-shadow: 0 1px 4px var(--crust);
+}
+.minute-heading {
+  margin-bottom: 14px;
+}
+.minute-graph .cursor-time text {
+  fill: var(--crust);
+  font: 600 12px var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 759px) {
+  .forecast-sky {
+    height: 285px;
   }
 }

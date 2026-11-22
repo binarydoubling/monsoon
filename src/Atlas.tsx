@@ -20,7 +20,7 @@ export interface AtlasProps {
   point: Place;
   focus: number;
   sidebar: number;
-  onPick: (lat: number, lon: number, name?: string) => Promise<void>;
+  onPick: (lat: number, lon: number, name?: string) => void;
 }
 
 const initial: [number, number] = [-25, 40];
