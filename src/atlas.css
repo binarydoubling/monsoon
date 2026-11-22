@@ -125,6 +125,7 @@
 
 .layer-choices {
   position: absolute;
+  z-index: 1;
   top: 44px;
   left: 0;
   display: grid;

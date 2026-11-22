@@ -727,7 +727,7 @@ export default function App() {
               ],
               [
                 "EOxCloudless",
-                "Global 10 m satellite mosaic by EOX IT Services GmbH. Contains modified Copernicus Sentinel data 2025. CC BY-NC-SA 4.0.",
+                "Satellite overview and global 10 m mosaic by EOX IT Services GmbH. Contains modified Copernicus Sentinel data 2025. Overview retiled for Monsoon. CC BY-NC-SA 4.0.",
                 "https://cloudless.eox.at/license-non-commercial",
               ],
               [
@@ -739,11 +739,6 @@ export default function App() {
                 "Iceland aerial imagery",
                 "Aerial photographs from Náttúrufræðistofnun, where survey coverage is available.",
                 "https://www.natt.is/en/resources/open-data/aerial-photos",
-              ],
-              [
-                "Earth overview",
-                "Solar System Scope (CC BY 4.0), reprojected and tinted for this atlas.",
-                "https://www.solarsystemscope.com/textures/",
               ],
               [
                 "Natural Earth",

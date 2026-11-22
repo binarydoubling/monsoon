@@ -43,6 +43,13 @@ export default function Atlas(props: AtlasProps) {
   layerPrefs.current = layers;
   function syncVisibility(m: maplibregl.Map) {
     const prefs = layerPrefs.current;
+    for (const id of ["relief", "iceland-relief"]) {
+      m.setLayoutProperty(
+        id,
+        "visibility",
+        prefs.satellite ? "none" : "visible",
+      );
+    }
     for (const id of imageryLayers) {
       if (m.getLayer(id))
         m.setLayoutProperty(
@@ -91,7 +98,7 @@ export default function Atlas(props: AtlasProps) {
     try {
       m = new maplibregl.Map({
         container: el,
-        style: atlasStyle(),
+        style: atlasStyle(window.devicePixelRatio),
         center: initial,
         zoom: Math.log2(extent / 240),
         minZoom: -1,
@@ -174,7 +181,8 @@ export default function Atlas(props: AtlasProps) {
         const detail: StyleSpecification = await response.json();
         if (!controller.signal.aborted) {
           providerLayers.current = detail.layers;
-          m.setStyle(atlasStyle(detail), { diff: false });
+          m.setStyle(atlasStyle(m.getPixelRatio(), detail));
+          syncVisibility(m);
         }
       } catch {
         if (!controller.signal.aborted) setDetailUnavailable(true);
@@ -287,7 +295,7 @@ export default function Atlas(props: AtlasProps) {
       </div>
       {(failure || detailUnavailable) && (
         <div className="map-message">
-          {failure || "Street detail is offline. The relief map is available."}{" "}
+          {failure || "Street detail is offline. The globe is still available."}{" "}
           <button
             onClick={() => {
               setFailure("");
