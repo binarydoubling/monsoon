@@ -1,20 +1,4 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  StyleSheet,
-  ScrollView,
-  TextInput,
-  Modal,
-  Pressable,
-  Linking,
-  useWindowDimensions,
-  ActivityIndicator,
-} from "react-native";
-import { StatusBar } from "expo-status-bar";
-import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
-import { useFonts } from "expo-font";
-import Feather from "@expo/vector-icons/Feather";
-import Storage from "@react-native-async-storage/async-storage";
+import React, { useState, useEffect, useRef } from "react";
 import Atlas from "./src/Atlas";
 import Outlook from "./src/Outlook";
 import {
@@ -57,16 +41,20 @@ interface SearchResponse {
     longitude: number;
   }[];
 }
-const fonts = {
-  ...Feather.font,
-  sans: require("@expo-google-fonts/dm-sans/400Regular/DMSans_400Regular.ttf"),
-  bold: require("@expo-google-fonts/dm-sans/600SemiBold/DMSans_600SemiBold.ttf"),
-  serif: require("@expo-google-fonts/dm-serif-display/400Regular/DMSerifDisplay_400Regular.ttf"),
-  mono: require("@expo-google-fonts/ibm-plex-mono/400Regular/IBMPlexMono_400Regular.ttf"),
-};
-function AppBody() {
-  const { width, height } = useWindowDimensions(),
-    small = width < 760;
+export default function App() {
+  const [viewport, setViewport] = useState(() => ({
+    width: innerWidth,
+    height: innerHeight,
+  }));
+  useEffect(() => {
+    const resize = () =>
+      setViewport({ width: innerWidth, height: innerHeight });
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+  const { width, height } = viewport;
+  const small = width < 760;
+  const dialog = useRef<HTMLDialogElement>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const panelWidth = Math.min(384, Math.round(width * 0.4));
   const [point, setPoint] = useState(home),
@@ -82,21 +70,28 @@ function AppBody() {
     [searchState, setSearchStatus] = useState(""),
     [storageReady, setStorageReady] = useState(false);
   useEffect(() => {
-    Storage.multiGet(["monsoon:saved", "monsoon:unit"])
-      .then(([[, s], [, f]]) => {
-        if (s) setSaved(JSON.parse(s));
-        setFahrenheit(f === "F");
-      })
-      .catch(() => {})
-      .finally(() => setStorageReady(true));
+    try {
+      const savedPoints = localStorage.getItem("monsoon:saved");
+      if (savedPoints) setSaved(JSON.parse(savedPoints));
+      setFahrenheit(localStorage.getItem("monsoon:unit") === "F");
+    } catch {
+      /* Storage can be unavailable in private browser sessions. */
+    }
+    setStorageReady(true);
   }, []);
   useEffect(() => {
-    if (storageReady)
-      Storage.multiSet([
-        ["monsoon:saved", JSON.stringify(saved)],
-        ["monsoon:unit", unit ? "F" : "C"],
-      ]).catch(() => {});
+    if (!storageReady) return;
+    try {
+      localStorage.setItem("monsoon:saved", JSON.stringify(saved));
+      localStorage.setItem("monsoon:unit", unit ? "F" : "C");
+    } catch {
+      /* Preferences still work for this session. */
+    }
   }, [saved, unit, storageReady]);
+  useEffect(() => {
+    if (modal) dialog.current?.showModal();
+    else dialog.current?.close();
+  }, [modal]);
   useEffect(() => {
     const ctrl = new AbortController();
     setStatus("loading");
@@ -231,18 +226,13 @@ function AppBody() {
       ]
     : [];
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: "#102125" }}>
-      <StatusBar style="light" />
-      <View style={{ flex: 1, overflow: "hidden" }}>
-        <View style={StyleSheet.absoluteFill}>
+    <main className="stack app">
+      <div className="stack" style={{ flex: 1, overflow: "hidden" }}>
+        <div className="stack" style={{ position: "absolute", inset: 0 }}>
           <Atlas
             point={point}
             focus={focus}
             sidebar={small ? 0 : panelWidth + 32}
-            dom={{
-              scrollEnabled: false,
-              style: { flex: 1, backgroundColor: "#102125" },
-            }}
             onPick={async (lat, lon, name) => {
               choose(
                 name === point.name &&
@@ -259,25 +249,24 @@ function AppBody() {
               );
             }}
           />
-        </View>
-        <View
-          style={[
-            row,
-            {
-              position: "absolute",
-              top: 0,
-              left: 0,
-              right: 0,
-              height: small ? 57 : 66,
-              paddingHorizontal: small ? 12 : 23,
-              backgroundColor: "#112427",
-              borderBottomColor: "#405553",
-              borderBottomWidth: 1,
-              gap: small ? 9 : 18,
-            },
-          ]}
+        </div>
+        <div
+          className="stack"
+          style={{
+            ...row,
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: small ? 57 : 66,
+            paddingInline: small ? 12 : 23,
+            backgroundColor: "#112427",
+            borderBottomColor: "#405553",
+            borderBottomWidth: 1,
+            gap: small ? 9 : 18,
+          }}
         >
-          <Button label="Monsoon home" onPress={() => choose(home)}>
+          <Button label="Monsoon home" onClick={() => choose(home)}>
             <Logo />
             <AtlasText
               face="serif"
@@ -289,7 +278,8 @@ function AppBody() {
             </AtlasText>
           </Button>
           {!small && (
-            <View
+            <div
+              className="stack"
               style={{
                 paddingLeft: 15,
                 borderLeftWidth: 1,
@@ -297,15 +287,15 @@ function AppBody() {
               }}
             >
               <Label color="#c6d3c5">WEATHER ATLAS</Label>
-            </View>
+            </div>
           )}
-          <View style={{ flex: 1 }} />
+          <div className="stack" style={{ flex: 1 }} />
           <Button
-            onPress={openSearch}
+            onClick={openSearch}
             label="Search places or coordinates"
             style={{
               height: 35,
-              paddingHorizontal: 9,
+              paddingInline: 9,
               borderWidth: small ? 0 : 1,
               borderColor: "#4a625f",
               borderRadius: 5,
@@ -320,7 +310,7 @@ function AppBody() {
           </Button>
           <Button
             label="Saved points"
-            onPress={() => setModal("saved")}
+            onClick={() => setModal("saved")}
             style={{ padding: 4 }}
           >
             <Icon name="bookmark" size={17} color={card} />
@@ -330,25 +320,24 @@ function AppBody() {
               </AtlasText>
             )}
           </Button>
-          <View
-            style={[
-              row,
-              {
-                borderWidth: 1,
-                borderColor: "#506661",
-                borderRadius: 5,
-                padding: 2,
-              },
-            ]}
+          <div
+            className="stack"
+            style={{
+              ...row,
+              borderWidth: 1,
+              borderColor: "#506661",
+              borderRadius: 5,
+              padding: 2,
+            }}
           >
             {[false, true].map((f) => (
               <Button
                 key={String(f)}
                 label={f ? "Use Fahrenheit" : "Use Celsius"}
-                onPress={() => setFahrenheit(f)}
+                onClick={() => setFahrenheit(f)}
                 style={{
-                  paddingHorizontal: small ? 5 : 8,
-                  paddingVertical: 4,
+                  paddingInline: small ? 5 : 8,
+                  paddingBlock: 4,
                   borderRadius: 3,
                   backgroundColor: f === unit ? card : "transparent",
                 }}
@@ -362,19 +351,18 @@ function AppBody() {
                 </AtlasText>
               </Button>
             ))}
-          </View>
-        </View>
+          </div>
+        </div>
         {(!small || sheetOpen) && (
-          <View
-            accessibilityLabel="Forecast panel"
-            style={[
-              box,
-              {
-                position: "absolute",
-                overflow: "hidden",
-                backgroundColor: paper,
-              },
-              small
+          <div
+            className="stack"
+            aria-label="Forecast panel"
+            style={{
+              ...box,
+              position: "absolute",
+              overflow: "hidden",
+              backgroundColor: paper,
+              ...(small
                 ? {
                     bottom: 0,
                     left: 0,
@@ -385,16 +373,17 @@ function AppBody() {
                     borderBottomLeftRadius: 0,
                     borderBottomRightRadius: 0,
                   }
-                : { right: 16, top: 82, bottom: 20, width: panelWidth },
-            ]}
+                : { right: 16, top: 82, bottom: 20, width: panelWidth }),
+            }}
           >
             {small && (
               <Button
                 label="Collapse forecast"
-                style={{ paddingVertical: 7 }}
-                onPress={() => setSheetOpen(false)}
+                style={{ paddingBlock: 7 }}
+                onClick={() => setSheetOpen(false)}
               >
-                <View
+                <div
+                  className="stack"
                   style={{
                     height: 4,
                     width: 33,
@@ -404,28 +393,31 @@ function AppBody() {
                 />
               </Button>
             )}
-            <ScrollView
+            <div
+              className="stack scroll"
               key={key(point)}
-              keyboardShouldPersistTaps="handled"
-              style={{ flexShrink: 1 }}
-              contentContainerStyle={{ paddingBottom: 12 }}
+              style={{ paddingBottom: 12 }}
             >
-              <View
+              <div
+                className="stack"
                 style={{
-                  paddingHorizontal: 20,
-                  paddingVertical: small ? 10 : 18,
+                  paddingInline: 20,
+                  paddingBlock: small ? 10 : 18,
                   gap: 10,
                   backgroundColor: card,
                 }}
               >
-                <View style={[row, { justifyContent: "space-between" }]}>
-                  <View style={[row, { gap: 7 }]}>
+                <div
+                  className="stack"
+                  style={{ ...row, justifyContent: "space-between" }}
+                >
+                  <div className="stack" style={{ ...row, gap: 7 }}>
                     <Icon name="map-pin" size={13} color={orange} />
                     <Label color={orange}>POINT FORECAST</Label>
-                  </View>
-                  <View style={[row, { gap: 7 }]}>
+                  </div>
+                  <div className="stack" style={{ ...row, gap: 7 }}>
                     <Button
-                      onPress={toggle}
+                      onClick={toggle}
                       label={selected ? "Remove saved point" : "Save point"}
                       style={{
                         padding: 5,
@@ -438,19 +430,19 @@ function AppBody() {
                     {small && (
                       <Button
                         label="Close forecast"
-                        onPress={() => setSheetOpen(false)}
+                        onClick={() => setSheetOpen(false)}
                         style={{ padding: 7 }}
                       >
                         <Icon name="x" size={18} />
                       </Button>
                     )}
-                  </View>
-                </View>
-                <View>
+                  </div>
+                </div>
+                <div className="stack">
                   <AtlasText
                     face="serif"
                     size={35}
-                    style={{ letterSpacing: -1.1, lineHeight: 42 }}
+                    style={{ letterSpacing: -1.1, lineHeight: "42px" }}
                   >
                     {point.name}
                   </AtlasText>
@@ -465,15 +457,18 @@ function AppBody() {
                   >
                     {coords(point)}
                   </AtlasText>
-                </View>
+                </div>
                 {h ? (
                   <>
-                    <View style={[row, { justifyContent: "space-between" }]}>
-                      <View>
+                    <div
+                      className="stack"
+                      style={{ ...row, justifyContent: "space-between" }}
+                    >
+                      <div className="stack">
                         <AtlasText
                           face="serif"
                           size={63}
-                          style={{ letterSpacing: -3, lineHeight: 72 }}
+                          style={{ letterSpacing: -3, lineHeight: "72px" }}
                         >
                           {temp(h.c, unit)}°
                           <AtlasText size={24} face="sans" color={sub}>
@@ -483,10 +478,11 @@ function AppBody() {
                         <AtlasText size={15} face="bold">
                           {h.desc}
                         </AtlasText>
-                      </View>
+                      </div>
                       <WeatherArt desc={h.desc} day={h.day} size={89} />
-                    </View>
-                    <View
+                    </div>
+                    <div
+                      className="stack"
                       style={{
                         ...row,
                         borderBottomWidth: 1,
@@ -501,8 +497,9 @@ function AppBody() {
                       <AtlasText face="mono" size={11}>
                         ↑ {Math.max(...nextDay)}° ↓ {Math.min(...nextDay)}°
                       </AtlasText>
-                    </View>
-                    <View
+                    </div>
+                    <div
+                      className="stack"
                       style={{
                         flexDirection: "row",
                         flexWrap: "wrap",
@@ -510,33 +507,45 @@ function AppBody() {
                       }}
                     >
                       {metrics.map(([ic, n, v]) => (
-                        <View key={n} style={{ width: "50%", ...row, gap: 8 }}>
+                        <div
+                          className="stack"
+                          key={n}
+                          style={{ width: "50%", ...row, gap: 8 }}
+                        >
                           <Icon name={ic} size={16} color={sub} />
-                          <View>
+                          <div className="stack">
                             <AtlasText size={10} color={sub}>
                               {n}
                             </AtlasText>
                             <AtlasText face="bold" size={13}>
                               {v}
                             </AtlasText>
-                          </View>
-                        </View>
+                          </div>
+                        </div>
                       ))}
-                    </View>
+                    </div>
                   </>
                 ) : (
-                  <View style={{ paddingVertical: 26 }}>
+                  <div className="stack" style={{ paddingBlock: 26 }}>
                     {state === "loading" ? (
-                      <ActivityIndicator color={ink} />
+                      <span
+                        className="spinner"
+                        role="status"
+                        aria-label="Loading forecast"
+                      />
                     ) : (
                       <AtlasText>
                         Forecast unavailable for this point.
                       </AtlasText>
                     )}
-                  </View>
+                  </div>
                 )}
-                <View style={[row, { gap: 6, marginTop: 6, flexWrap: "wrap" }]}>
-                  <View
+                <div
+                  className="stack"
+                  style={{ ...row, gap: 6, marginTop: 6, flexWrap: "wrap" }}
+                >
+                  <div
+                    className="stack"
                     style={{
                       width: 6,
                       height: 6,
@@ -558,42 +567,40 @@ function AppBody() {
                     {date ? "  ·  " + date + "  " + clock : ""}
                   </AtlasText>
                   {state === "offline" && (
-                    <Button onPress={() => setRetry((v) => v + 1)}>
+                    <Button onClick={() => setRetry((v) => v + 1)}>
                       <AtlasText size={11} color={orange}>
                         Retry
                       </AtlasText>
                     </Button>
                   )}
-                </View>
-              </View>
+                </div>
+              </div>
               {data && h && <Outlook hours={hours} zone={data.zone} f={unit} />}
               <Button
-                onPress={() => setModal("sources")}
-                style={{ paddingVertical: 8 }}
+                onClick={() => setModal("sources")}
+                style={{ paddingBlock: 8 }}
               >
                 <Icon name="info" size={12} />
                 <AtlasText size={11} color={sub}>
                   Data & map sources
                 </AtlasText>
               </Button>
-            </ScrollView>
-          </View>
+            </div>
+          </div>
         )}
         {small && !sheetOpen && (
           <Button
             label="Open forecast"
-            onPress={() => setSheetOpen(true)}
-            style={[
-              box,
-              {
-                position: "absolute",
-                bottom: 8,
-                left: 12,
-                right: 12,
-                paddingVertical: 9,
-                gap: 9,
-              },
-            ]}
+            onClick={() => setSheetOpen(true)}
+            style={{
+              ...box,
+              position: "absolute",
+              bottom: 8,
+              left: 12,
+              right: 12,
+              paddingBlock: 9,
+              gap: 9,
+            }}
           >
             <Icon name="map-pin" size={13} color={orange} />
             <AtlasText size={13} face="bold">
@@ -607,207 +614,172 @@ function AppBody() {
             <Icon name="chevron-up" size={14} />
           </Button>
         )}
-      </View>
-      <Modal
-        visible={!!modal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setModal("")}
+      </div>
+      <dialog
+        ref={dialog}
+        className="place-dialog"
+        aria-labelledby="dialog-title"
+        onCancel={() => setModal("")}
+        onClick={(event) => {
+          if (event.target !== event.currentTarget) return;
+          const r = event.currentTarget.getBoundingClientRect();
+          if (
+            event.clientX < r.left ||
+            event.clientX > r.right ||
+            event.clientY < r.top ||
+            event.clientY > r.bottom
+          )
+            setModal("");
+        }}
       >
-        <View
-          style={{
-            flex: 1,
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 20,
-            backgroundColor: "#17302866",
-          }}
+        <div
+          className="stack"
+          style={{ ...row, justifyContent: "space-between" }}
         >
-          <Pressable
-            accessibilityLabel="Dismiss dialog"
-            onPress={() => setModal("")}
-            style={{
-              position: "absolute",
-              top: 0,
-              bottom: 0,
-              left: 0,
-              right: 0,
-            }}
-          />
-          <View
-            style={[
-              box,
-              {
-                width: "100%",
-                maxWidth: 500,
-                maxHeight: "82%",
-                padding: 22,
-                gap: 15,
-              },
-            ]}
+          <AtlasText id="dialog-title" face="serif" size={27}>
+            {modal === "saved"
+              ? "Saved points"
+              : modal === "search"
+                ? "Find a point"
+                : "Data & map sources"}
+          </AtlasText>
+          <Button
+            label="Close"
+            style={{ padding: 5 }}
+            onClick={() => setModal("")}
           >
-            <View style={[row, { justifyContent: "space-between" }]}>
-              <AtlasText face="serif" size={27}>
-                {modal === "saved"
-                  ? "Saved points"
-                  : modal === "search"
-                    ? "Find a point"
-                    : "Data & map sources"}
+            <Icon name="x" />
+          </Button>
+        </div>
+        {modal === "search" && (
+          <>
+            <input
+              aria-label="Place name or coordinates"
+              autoFocus
+              placeholder="Place name or latitude, longitude"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && results[0]) choose(results[0]);
+              }}
+              style={{
+                ...box,
+                padding: 12,
+                fontFamily: '"DM Sans", sans-serif',
+                fontSize: 16,
+                color: ink,
+              }}
+            />
+            {searchState && (
+              <AtlasText size={12} color={sub}>
+                {searchState}
               </AtlasText>
+            )}
+          </>
+        )}
+        {(modal === "search" || modal === "saved") && (
+          <div className="stack scroll">
+            {(modal === "saved" ? saved : results).map((p, i) => (
               <Button
-                label="Close"
-                style={{ padding: 5 }}
-                onPress={() => setModal("")}
+                key={key(p) + i}
+                onClick={() => choose(p)}
+                style={{
+                  justifyContent: "flex-start",
+                  paddingBlock: 11,
+                  borderBottomWidth: 1,
+                  borderColor: line,
+                  gap: 10,
+                }}
               >
-                <Icon name="x" />
-              </Button>
-            </View>
-            {modal === "search" && (
-              <>
-                <TextInput
-                  accessibilityLabel="Place name or coordinates"
-                  autoFocus
-                  placeholder="Place name or latitude, longitude"
-                  value={query}
-                  onChangeText={setQuery}
-                  onSubmitEditing={() => results[0] && choose(results[0])}
-                  placeholderTextColor={sub}
-                  style={[
-                    box,
-                    {
-                      padding: 12,
-                      fontFamily: "sans",
-                      fontSize: 16,
-                      color: ink,
-                    },
-                  ]}
-                />
-                {searchState && (
+                <Icon name="map-pin" color={orange} />
+                <div className="stack" style={{ flex: 1 }}>
+                  <AtlasText face="bold">{p.name}</AtlasText>
                   <AtlasText size={12} color={sub}>
-                    {searchState}
+                    {p.region}
                   </AtlasText>
-                )}
-              </>
+                </div>
+              </Button>
+            ))}
+            {modal === "saved" && !saved.length && (
+              <AtlasText color={sub}>
+                Use the bookmark on a point forecast to save it here.
+              </AtlasText>
             )}
-            {(modal === "search" || modal === "saved") && (
-              <ScrollView keyboardShouldPersistTaps="handled">
-                {(modal === "saved" ? saved : results).map((p, i) => (
-                  <Button
-                    key={key(p) + i}
-                    onPress={() => choose(p)}
-                    style={{
-                      justifyContent: "flex-start",
-                      paddingVertical: 11,
-                      borderBottomWidth: 1,
-                      borderColor: line,
-                      gap: 10,
-                    }}
-                  >
-                    <Icon name="map-pin" color={orange} />
-                    <View style={{ flex: 1 }}>
-                      <AtlasText face="bold">{p.name}</AtlasText>
-                      <AtlasText size={12} color={sub}>
-                        {p.region}
-                      </AtlasText>
-                    </View>
-                  </Button>
-                ))}
-                {modal === "saved" && !saved.length && (
-                  <AtlasText color={sub}>
-                    Use the bookmark on a point forecast to save it here.
+          </div>
+        )}
+        {modal === "sources" && (
+          <div className="stack scroll">
+            {[
+              [
+                "National Weather Service",
+                "Hourly point forecasts in supported US areas.",
+                "https://www.weather.gov/documentation/services-web-api",
+              ],
+              [
+                "Open-Meteo",
+                "Global hourly forecasts and place search (GeoNames). Weather data licensed CC BY 4.0. Free API for non-commercial use.",
+                "https://open-meteo.com/",
+              ],
+              [
+                "OpenFreeMap",
+                "Street cartography © OpenMapTiles, with data from OpenStreetMap contributors. Rendered by MapLibre.",
+                "https://openfreemap.org/",
+              ],
+              [
+                "EOxCloudless",
+                "Global 10 m satellite mosaic by EOX IT Services GmbH. Contains modified Copernicus Sentinel data 2025. CC BY-NC-SA 4.0.",
+                "https://cloudless.eox.at/license-non-commercial",
+              ],
+              [
+                "U.S. aerial imagery",
+                "USDA and USGS The National Map provide local orthoimagery in the contiguous United States.",
+                "https://www.usgs.gov/faqs/what-are-base-map-services-or-urls-used-national-map",
+              ],
+              [
+                "Iceland aerial imagery",
+                "Aerial photographs from Náttúrufræðistofnun, where survey coverage is available.",
+                "https://www.natt.is/en/resources/open-data/aerial-photos",
+              ],
+              [
+                "Earth overview",
+                "Solar System Scope (CC BY 4.0), reprojected and tinted for this atlas.",
+                "https://www.solarsystemscope.com/textures/",
+              ],
+              [
+                "Natural Earth",
+                "Public-domain coastlines and geographic names.",
+                "https://www.naturalearthdata.com/",
+              ],
+              [
+                "Mapzen terrain",
+                "Shaded relief derived from Terrain Tiles. View elevation and bathymetry source credits.",
+                "https://github.com/tilezen/joerd/blob/master/docs/attribution.md",
+              ],
+            ].map(([name, desc, url]) => (
+              <Button
+                key={name}
+                onClick={() =>
+                  window.open(url, "_blank", "noopener,noreferrer")
+                }
+                style={{
+                  paddingBlock: 10,
+                  borderTopWidth: 1,
+                  borderColor: line,
+                  gap: 12,
+                }}
+              >
+                <div className="stack" style={{ flex: 1 }}>
+                  <AtlasText face="bold">{name}</AtlasText>
+                  <AtlasText size={13} color={sub}>
+                    {desc}
                   </AtlasText>
-                )}
-              </ScrollView>
-            )}
-            {modal === "sources" && (
-              <ScrollView>
-                {[
-                  [
-                    "National Weather Service",
-                    "Hourly point forecasts in supported US areas.",
-                    "https://www.weather.gov/documentation/services-web-api",
-                  ],
-                  [
-                    "Open-Meteo",
-                    "Global hourly forecasts and place search (GeoNames). Weather data licensed CC BY 4.0. Free API for non-commercial use.",
-                    "https://open-meteo.com/",
-                  ],
-                  [
-                    "OpenFreeMap",
-                    "Street cartography © OpenMapTiles, with data from OpenStreetMap contributors. Rendered by MapLibre.",
-                    "https://openfreemap.org/",
-                  ],
-                  [
-                    "EOxCloudless",
-                    "Global 10 m satellite mosaic by EOX IT Services GmbH. Contains modified Copernicus Sentinel data 2025. CC BY-NC-SA 4.0.",
-                    "https://cloudless.eox.at/license-non-commercial",
-                  ],
-                  [
-                    "U.S. aerial imagery",
-                    "USDA and USGS The National Map provide local orthoimagery in the contiguous United States.",
-                    "https://www.usgs.gov/faqs/what-are-base-map-services-or-urls-used-national-map",
-                  ],
-                  [
-                    "Iceland aerial imagery",
-                    "Aerial photographs from Náttúrufræðistofnun, where survey coverage is available.",
-                    "https://www.natt.is/en/resources/open-data/aerial-photos",
-                  ],
-                  [
-                    "Earth overview",
-                    "Solar System Scope (CC BY 4.0), reprojected and tinted for this atlas.",
-                    "https://www.solarsystemscope.com/textures/",
-                  ],
-                  [
-                    "Natural Earth",
-                    "Public-domain coastlines and geographic names.",
-                    "https://www.naturalearthdata.com/",
-                  ],
-                  [
-                    "Mapzen terrain",
-                    "Shaded relief derived from Terrain Tiles. View elevation and bathymetry source credits.",
-                    "https://github.com/tilezen/joerd/blob/master/docs/attribution.md",
-                  ],
-                ].map(([name, desc, url]) => (
-                  <Button
-                    key={name}
-                    onPress={() => Linking.openURL(url)}
-                    style={{
-                      paddingVertical: 10,
-                      borderTopWidth: 1,
-                      borderColor: line,
-                      gap: 12,
-                    }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <AtlasText face="bold">{name}</AtlasText>
-                      <AtlasText size={13} color={sub}>
-                        {desc}
-                      </AtlasText>
-                    </View>
-                    <Icon name="external-link" size={15} />
-                  </Button>
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
-  );
-}
-export default function App() {
-  const [loaded, error] = useFonts(fonts);
-  if (!loaded && !error)
-    return (
-      <View
-        style={{ flex: 1, backgroundColor: paper, justifyContent: "center" }}
-      >
-        <ActivityIndicator color={ink} />
-      </View>
-    );
-  return (
-    <SafeAreaProvider>
-      <AppBody />
-    </SafeAreaProvider>
+                </div>
+                <Icon name="external-link" size={15} />
+              </Button>
+            ))}
+          </div>
+        )}
+      </dialog>
+    </main>
   );
 }

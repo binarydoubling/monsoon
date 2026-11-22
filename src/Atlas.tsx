@@ -1,18 +1,15 @@
-"use dom";
 import React, { useEffect, useRef, useState } from "react";
 import maplibregl, { type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./atlas.css";
 import type { Place } from "./weather";
-import type { DOMProps } from "expo/dom";
 import { atlasStyle, imageryLayers, providerURL } from "./basemap";
 
-interface Props {
+export interface AtlasProps {
   point: Place;
   focus: number;
   sidebar: number;
   onPick: (lat: number, lon: number, name?: string) => Promise<void>;
-  dom?: DOMProps;
 }
 const initial: [number, number] = [-25, 40];
 const formatPosition = (lat: number, lon: number) =>
@@ -23,7 +20,7 @@ const formatPosition = (lat: number, lon: number) =>
   Math.abs(lon).toFixed(2) +
   "°" +
   (lon < 0 ? "W" : "E");
-export default function Atlas(props: Props) {
+export default function Atlas(props: AtlasProps) {
   const host = useRef<HTMLDivElement>(null),
     map = useRef<maplibregl.Map | null>(null),
     pin = useRef<maplibregl.Marker | null>(null),

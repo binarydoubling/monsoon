@@ -1,7 +1,5 @@
-import { Asset } from "expo-asset";
 import type { StyleSpecification, LayerSpecification } from "maplibre-gl";
 
-const uri = (image: number) => Asset.fromModule(image).uri;
 const lat = (y: number) =>
   (Math.atan(Math.sinh(Math.PI * (1 - 2 * y))) * 180) / Math.PI;
 const icelandWest = -30.9375,
@@ -120,7 +118,7 @@ export function atlasStyle(detail?: StyleSpecification): StyleSpecification {
       },
       earth: {
         type: "raster",
-        tiles: [uri(require("../assets/maps/earth.jpg"))],
+        tiles: [new URL("../assets/maps/earth.jpg", import.meta.url).href],
         maxzoom: 0,
         tileSize: 512,
         attribution:
@@ -128,14 +126,14 @@ export function atlasStyle(detail?: StyleSpecification): StyleSpecification {
       },
       relief: {
         type: "raster",
-        tiles: [uri(require("../assets/maps/world.jpg"))],
+        tiles: [new URL("../assets/maps/world.jpg", import.meta.url).href],
         maxzoom: 0,
         tileSize: 512,
         attribution: "Natural Earth · Mapzen",
       },
       iceland: {
         type: "image",
-        url: uri(require("../assets/maps/iceland.jpg")),
+        url: new URL("../assets/maps/iceland.jpg", import.meta.url).href,
         coordinates: [
           [icelandWest, lat(0.234375)],
           [icelandEast, lat(0.234375)],

@@ -1,4 +1,3 @@
-import { Platform } from "react-native";
 import snapshot from "./reykjavik.json";
 export interface Coordinates {
   lat: number;
@@ -115,14 +114,7 @@ export async function getJSON<T>(url: string, signal: AbortSignal): Promise<T> {
   try {
     const r = await fetch(url, {
       signal: control.signal,
-      headers:
-        Platform.OS !== "web" && url.startsWith("https://api.weather.gov/")
-          ? {
-              Accept: "application/geo+json",
-              "User-Agent":
-                "MonsoonWeatherAtlas/1.0 (https://github.com/binarydoubling/monsoon)",
-            }
-          : { Accept: "application/json" },
+      headers: { Accept: "application/json" },
     });
     if (!r.ok) throw Error("Service unavailable");
     return await r.json();

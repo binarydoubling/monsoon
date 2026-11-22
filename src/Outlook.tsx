@@ -1,15 +1,4 @@
-import React, { useState } from "react";
-import { View, StyleSheet } from "react-native";
-import Svg, {
-  G,
-  Defs,
-  LinearGradient,
-  Stop,
-  Path,
-  Line,
-  Circle,
-  Text as ST,
-} from "react-native-svg";
+import React, { useState, useRef, useEffect } from "react";
 import {
   AtlasText,
   Button,
@@ -26,9 +15,10 @@ import {
 } from "./ui";
 import { local, wind } from "./weather";
 import type { ForecastHour } from "./weather";
-import type { GestureResponderEvent } from "react-native";
+
 const gestureStyle = {
-  ...StyleSheet.absoluteFillObject,
+  position: "absolute",
+  inset: 0,
   touchAction: "pan-y",
   cursor: "pointer",
 } as const;
@@ -50,6 +40,15 @@ export default function Outlook({
     [metric, setMetric] = useState(0),
     [index, setIndex] = useState(0),
     [width, setWidth] = useState(340);
+  const chart = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!chart.current) return;
+    const observer = new ResizeObserver(([entry]) =>
+      setWidth(Math.max(90, entry.contentRect.width)),
+    );
+    observer.observe(chart.current);
+    return () => observer.disconnect();
+  }, []);
   const small = width < 540;
   const data = hours.slice(0, duration);
   if (!data.length) return null;
@@ -92,14 +91,15 @@ export default function Outlook({
     h = data[idx],
     clock = (t: number) =>
       local(t, zone, { hour: "numeric" }).toLowerCase().replace(" ", "");
-  const pick = (e: GestureResponderEvent) =>
+  const pick = (e: React.PointerEvent<HTMLDivElement>) =>
     setIndex(
       Math.max(
         0,
         Math.min(
           data.length - 1,
           Math.round(
-            ((e.nativeEvent.locationX - left) / (end - left)) *
+            ((e.clientX - e.currentTarget.getBoundingClientRect().left - left) /
+              (end - left)) *
               (data.length - 1),
           ),
         ),
@@ -167,32 +167,40 @@ export default function Outlook({
       Math.floor((i * data.length) / Math.min(small ? 3 : 4, data.length)),
   );
   return (
-    <View
+    <div
+      className="stack"
       style={{ borderTopWidth: 1, borderColor: line, padding: 16, gap: 13 }}
     >
-      <View style={[row, { justifyContent: "space-between", gap: 8 }]}>
-        <View style={[row, { gap: 10 }]}>
+      <div
+        className="stack"
+        style={{ ...row, justifyContent: "space-between", gap: 8 }}
+      >
+        <div className="stack" style={{ ...row, gap: 10 }}>
           <Icon name="activity" size={23} color={orange} />
           <AtlasText face="serif" size={small ? 25 : 31}>
             Hourly outlook
           </AtlasText>
-        </View>
-        <View
-          style={[
-            row,
-            { borderWidth: 1, borderColor: line, borderRadius: 5, padding: 2 },
-          ]}
+        </div>
+        <div
+          className="stack"
+          style={{
+            ...row,
+            borderWidth: 1,
+            borderColor: line,
+            borderRadius: 5,
+            padding: 2,
+          }}
         >
           {[24, 48].map((n) => (
             <Button
               key={n}
-              onPress={() => {
+              onClick={() => {
                 setDuration(n);
                 setIndex(0);
               }}
               style={{
-                paddingHorizontal: small ? 9 : 13,
-                paddingVertical: 5,
+                paddingInline: small ? 9 : 13,
+                paddingBlock: 5,
                 borderRadius: 3,
                 backgroundColor: duration === n ? ink : "transparent",
               }}
@@ -206,20 +214,23 @@ export default function Outlook({
               </AtlasText>
             </Button>
           ))}
-        </View>
-      </View>
-      <View style={[row, { gap: small ? 5 : 8, flexWrap: "wrap" }]}>
+        </div>
+      </div>
+      <div
+        className="stack"
+        style={{ ...row, gap: small ? 5 : 8, flexWrap: "wrap" }}
+      >
         {metrics.map(([n, ic], i) => (
           <Button
             key={n}
-            onPress={() => setMetric(i)}
+            onClick={() => setMetric(i)}
             style={{
               borderWidth: 1,
               borderColor: i === metric ? "#b9c8b6" : line,
               backgroundColor: i === metric ? "#e3eadc" : "transparent",
               borderRadius: 20,
-              paddingVertical: 6,
-              paddingHorizontal: small ? 8 : 13,
+              paddingBlock: 6,
+              paddingInline: small ? 8 : 13,
             }}
           >
             <Icon name={ic} size={13} />
@@ -229,24 +240,25 @@ export default function Outlook({
           </Button>
         ))}
         {!small && (
-          <View style={{ marginLeft: "auto" }}>
+          <div className="stack" style={{ marginLeft: "auto" }}>
             <Label>
               LOCAL TIME ·{" "}
               {(zone.split("/").pop() ?? zone)
                 .replaceAll("_", " ")
                 .toUpperCase()}
             </Label>
-          </View>
+          </div>
         )}
-      </View>
-      <View
-        style={[row, { borderTopWidth: 1, borderColor: line, paddingTop: 12 }]}
+      </div>
+      <div
+        className="stack"
+        style={{ ...row, borderTopWidth: 1, borderColor: line, paddingTop: 12 }}
       >
         {slots.map((i, j) => (
           <Button
             label={"Inspect " + stamp(i)}
             key={i}
-            onPress={() => setIndex(i)}
+            onClick={() => setIndex(i)}
             style={{
               flex: 1,
               justifyContent: "flex-start",
@@ -260,33 +272,30 @@ export default function Outlook({
               day={data[i].day}
               size={small ? 27 : 35}
             />
-            <View style={{ flex: 1 }}>
+            <div className="stack" style={{ flex: 1 }}>
               <AtlasText face="mono" size={small ? 9 : 10} color={sub}>
                 {stamp(i).toUpperCase()}
               </AtlasText>
               <AtlasText size={small ? 11 : 13} numberOfLines={2}>
                 {data[i].desc}
               </AtlasText>
-            </View>
+            </div>
           </Button>
         ))}
-      </View>
-      <View
-        onLayout={(e) => setWidth(Math.max(90, e.nativeEvent.layout.width))}
-        style={{ height: 141 }}
-      >
-        <Svg width="100%" height="141" pointerEvents="none">
-          <Defs>
-            <LinearGradient id="area" x1="0" x2="0" y1="0" y2="1">
-              <Stop offset="0" stopColor={color} stopOpacity=".3" />
-              <Stop offset="1" stopColor={color} stopOpacity=".035" />
-            </LinearGradient>
-          </Defs>
+      </div>
+      <div className="stack" ref={chart} style={{ height: 141 }}>
+        <svg width="100%" height="141" pointerEvents="none">
+          <defs>
+            <linearGradient id="area" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0" stopColor={color} stopOpacity=".3" />
+              <stop offset="1" stopColor={color} stopOpacity=".035" />
+            </linearGradient>
+          </defs>
           {Array.from({ length: 4 }, (_, i) => {
             const yy = top + (i * (bottom - top)) / 3;
             return (
-              <G key={i}>
-                <Line
+              <g key={i}>
+                <line
                   x1={left}
                   y1={yy}
                   x2={end}
@@ -294,7 +303,7 @@ export default function Outlook({
                   stroke={line}
                   strokeDasharray="3 4"
                 />
-                <ST
+                <text
                   x={left - 8}
                   y={yy + 3}
                   textAnchor="end"
@@ -303,8 +312,8 @@ export default function Outlook({
                 >
                   {Math.round(ceiling - ((ceiling - floor) * i) / 3)}
                   {metric === 0 ? "°" : metric === 1 ? "%" : ""}
-                </ST>
-              </G>
+                </text>
+              </g>
             );
           })}
           {segments.map((s, i) => {
@@ -329,8 +338,8 @@ export default function Outlook({
               })
               .join(" ");
             return (
-              <G key={i}>
-                <Path
+              <g key={i}>
+                <path
                   d={
                     path +
                     " L" +
@@ -345,14 +354,14 @@ export default function Outlook({
                   }
                   fill="url(#area)"
                 />
-                <Path
+                <path
                   d={path}
                   fill="none"
                   stroke={color}
                   strokeWidth={2.7}
                   strokeLinejoin="round"
                 />
-              </G>
+              </g>
             );
           })}
           {data.map((v, i) => {
@@ -363,9 +372,9 @@ export default function Outlook({
               return null;
             if (i !== data.length - 1 && data.length - i <= 2) return null;
             return (
-              <G key={i}>
+              <g key={i}>
                 {vals[i] != null && (
-                  <Circle
+                  <circle
                     cx={x(i)}
                     cy={y(vals[i])}
                     r={3}
@@ -374,7 +383,7 @@ export default function Outlook({
                     strokeWidth={1.5}
                   />
                 )}
-                <ST
+                <text
                   x={x(i)}
                   y={133}
                   fontSize={10}
@@ -382,13 +391,13 @@ export default function Outlook({
                   textAnchor={i === data.length - 1 ? "end" : "middle"}
                 >
                   {clock(v.t)}
-                </ST>
-              </G>
+                </text>
+              </g>
             );
           })}
           {vals[idx] != null && (
-            <G>
-              <Line
+            <g>
+              <line
                 x1={x(idx)}
                 x2={x(idx)}
                 y1={top}
@@ -396,7 +405,7 @@ export default function Outlook({
                 stroke={color}
                 strokeDasharray="3 4"
               />
-              <Circle
+              <circle
                 cx={x(idx)}
                 cy={y(vals[idx])}
                 r={5}
@@ -404,17 +413,24 @@ export default function Outlook({
                 stroke={card}
                 strokeWidth={2}
               />
-            </G>
+            </g>
           )}
-        </Svg>
-        <View
-          onStartShouldSetResponder={() => true}
-          onResponderGrant={pick}
-          onResponderMove={pick}
+        </svg>
+        <div
+          className="stack"
+          onPointerDown={(event) => {
+            event.currentTarget.setPointerCapture(event.pointerId);
+            pick(event);
+          }}
+          onPointerMove={(event) => {
+            if (event.currentTarget.hasPointerCapture(event.pointerId))
+              pick(event);
+          }}
           style={gestureStyle}
         />
-      </View>
-      <View
+      </div>
+      <div
+        className="stack"
         style={{
           ...row,
           gap: 10,
@@ -424,10 +440,10 @@ export default function Outlook({
           flexWrap: "wrap",
         }}
       >
-        <View style={[row, { gap: 6 }]}>
+        <div className="stack" style={{ ...row, gap: 6 }}>
           <Button
             label="Previous hour"
-            onPress={() => setIndex(Math.max(0, idx - 1))}
+            onClick={() => setIndex(Math.max(0, idx - 1))}
           >
             <Icon name="chevron-left" size={16} />
           </Button>
@@ -437,16 +453,16 @@ export default function Outlook({
           </AtlasText>
           <Button
             label="Next hour"
-            onPress={() => setIndex(Math.min(data.length - 1, idx + 1))}
+            onClick={() => setIndex(Math.min(data.length - 1, idx + 1))}
           >
             <Icon name="chevron-right" size={16} />
           </Button>
-        </View>
+        </div>
         <AtlasText size={13} color={sub} style={{ flexGrow: 1 }}>
           {narrative}
           {skyStory}
         </AtlasText>
-      </View>
-    </View>
+      </div>
+    </div>
   );
 }

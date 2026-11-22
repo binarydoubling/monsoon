@@ -1,7 +1,6 @@
 node_modules/
-.expo/
 dist/
-dist-native/
+release/
 package-lock.json
 # Bundled provider forecast snapshot
 src/reykjavik.json
