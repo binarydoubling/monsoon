@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Monsoon",
+    "slug": "monsoon-atlas",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "web": { "bundler": "metro", "name": "Monsoon · Weather Atlas" },
+    "ios": { "supportsTablet": true, "bundleIdentifier": "app.monsoon.atlas" },
+    "android": { "package": "app.monsoon.atlas" }
+  }
+}
