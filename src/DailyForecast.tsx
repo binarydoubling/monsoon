@@ -1,18 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Conditions, { WeatherBackground } from "./Conditions";
 import LocationHeading from "./LocationHeading";
 import type { Place, Forecast, ForecastHour } from "./weather";
 import { temp } from "./weather";
-import { WeatherArt } from "./ui";
+import WeatherArt from "./WeatherArt";
+import { describePeriod } from "./dayStory";
+import { forecastPeriods } from "./forecastPeriods";
 import "./daily.css";
 
-const weekday = new Intl.DateTimeFormat("en-US", {
-  weekday: "short",
-  timeZone: "UTC",
-});
-
-const fullDate = new Intl.DateTimeFormat("en-US", {
-  dateStyle: "full",
+const dateHeading = new Intl.DateTimeFormat("en-US", {
+  weekday: "long",
+  month: "short",
+  day: "numeric",
   timeZone: "UTC",
 });
 
@@ -81,14 +80,25 @@ export default function DailyForecast({
   fahrenheit: boolean;
   saved?: boolean;
 }) {
-  const { current, daily, zone } = forecast;
+  const { current, zone } = forecast;
 
-  const temperatures = daily.flatMap(({ high, low }) =>
-    [low, high].filter((v): v is number => v !== null),
+  const outlook = useMemo(
+    () =>
+      forecastPeriods(forecast, saved ? undefined : Date.now() / 1000).map(
+        ({ date, daily, periods }) => ({
+          date,
+          daily,
+          periods: periods.map(({ name, hours }) => ({
+            name,
+            summary: hours.length
+              ? describePeriod(hours, name === "Day", zone, fahrenheit)
+              : null,
+          })),
+        }),
+      ),
+    [forecast, zone, fahrenheit, saved],
   );
 
-  const minimum = Math.min(...temperatures);
-  const span = Math.max(...temperatures) - minimum;
   const heading = saved ? "Saved conditions" : "Current conditions";
 
   return (
@@ -111,65 +121,68 @@ export default function DailyForecast({
         )}
         <section className="daily-week" aria-label="Daily forecast">
           <h2 className="display">Daily forecast</h2>
-          {daily.length ? (
-            <table aria-label="Daily forecast temperatures">
-              <thead>
-                <tr>
-                  <th scope="col">Day</th>
-                  <th scope="col" aria-label="Conditions" />
-                  <th scope="col">Low</th>
-                  <th scope="col" aria-label="Temperature range" />
-                  <th scope="col">High</th>
-                </tr>
-              </thead>
-              <tbody>
-                {daily.map(({ date, desc, low, high }) => {
-                  const civilDate = new Date(date + "T12:00:00Z");
-                  const label = fullDate.format(civilDate);
-
-                  return (
-                    <tr key={date}>
-                      <th scope="row">
-                        <time dateTime={date} title={label} aria-label={label}>
-                          {weekday.format(civilDate)}
-                        </time>
-                      </th>
-                      <td className="daily-condition-cell">
-                        <span className="daily-weather">
-                          <span aria-hidden="true">
-                            <WeatherArt desc={desc} size={22} />
-                          </span>
-                          {desc}
-                        </span>
-                      </td>
-                      <td className="daily-low">
-                        {low === null ? "—" : temp(low, fahrenheit) + "°"}
-                      </td>
-                      <td className="daily-range-cell">
-                        {low !== null && high !== null && (
-                          <span className="daily-range" aria-hidden="true">
-                            <span
-                              style={{
-                                left:
-                                  (span ? (100 * (low - minimum)) / span : 50) +
-                                  "%",
-                                right:
-                                  (span
-                                    ? 100 * (1 - (high - minimum) / span)
-                                    : 50) + "%",
-                              }}
-                            />
-                          </span>
-                        )}
-                      </td>
-                      <td className="daily-high">
-                        {high === null ? "—" : temp(high, fahrenheit) + "°"}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          {outlook.length ? (
+            outlook.map(({ date, daily, periods }, index) => (
+              <details className="daily-date" key={date} open={index === 0}>
+                <summary>
+                  {daily && (
+                    <span className="daily-symbol" title={daily.desc}>
+                      <WeatherArt desc={daily.desc} size={24} />
+                    </span>
+                  )}
+                  <time dateTime={date}>
+                    {dateHeading.format(new Date(date + "T12:00Z"))}
+                  </time>
+                  <span className="daily-extremes">
+                    {daily?.high != null && (
+                      <span
+                        className="daily-high"
+                        aria-label={
+                          "Daily high " +
+                          temp(daily.high, fahrenheit) +
+                          " degrees"
+                        }
+                      >
+                        H {temp(daily.high, fahrenheit)}°
+                      </span>
+                    )}
+                    {daily?.low != null && (
+                      <span
+                        aria-label={
+                          "Daily low " +
+                          temp(daily.low, fahrenheit) +
+                          " degrees"
+                        }
+                      >
+                        L {temp(daily.low, fahrenheit)}°
+                      </span>
+                    )}
+                  </span>
+                </summary>
+                {periods.map(({ name, summary }) => (
+                  <section
+                    className="daily-period"
+                    aria-label={name + " forecast"}
+                    key={name}
+                  >
+                    <WeatherArt
+                      desc={summary?.desc ?? "Conditions unavailable"}
+                      day={name === "Day"}
+                      size={38}
+                    />
+                    <div>
+                      <h3>
+                        {name} {summary && <span>{summary.time}</span>}
+                      </h3>
+                      <p>
+                        {summary?.text ??
+                          "Hourly forecast unavailable for this period."}
+                      </p>
+                    </div>
+                  </section>
+                ))}
+              </details>
+            ))
           ) : (
             <p className="daily-unavailable">Daily forecast unavailable.</p>
           )}

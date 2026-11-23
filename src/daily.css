@@ -25,83 +25,76 @@
 .current-weather h2 {
   text-shadow: 0 1px 5px var(--crust);
 }
-.daily-week thead,
-.daily-unavailable {
-  color: var(--subtext0);
-}
-.daily-week table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.daily-week th,
-.daily-week td {
-  padding: 5px 4px;
-  text-align: right;
-  white-space: nowrap;
-}
-.daily-week thead th {
-  font-size: 12px;
-  font-weight: 500;
-}
-.daily-week tbody th {
-  font-size: 15px;
-  font-weight: 600;
-}
-.daily-week th:first-child {
-  padding-left: 0;
-  text-align: left;
-}
-.daily-week :is(th, td):last-child {
-  padding-right: 0;
-}
-.daily-week tbody tr + tr {
+.daily-date {
   border-top: 1px solid var(--surface0);
 }
-.daily-week .daily-condition-cell {
-  text-align: left;
-  white-space: normal;
-}
-.daily-weather {
+.daily-date > summary {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  line-height: 1.2;
+  gap: 8px;
+  padding-block: 12px;
+  list-style: none;
+  cursor: pointer;
 }
-.daily-weather svg {
+.daily-date > summary::-webkit-details-marker {
+  display: none;
+}
+.daily-date > summary::after {
+  content: "";
+  align-self: center;
+  border: solid var(--subtext0);
+  border-width: 0 1.5px 1.5px 0;
+  width: 6px;
+  height: 6px;
+  margin-inline: 3px;
+  transform: rotate(-45deg);
+}
+.daily-date[open] > summary::after {
+  transform: rotate(45deg);
+}
+.daily-symbol,
+.daily-symbol svg {
   display: block;
+  flex-shrink: 0;
 }
-.daily-range-cell {
-  width: 22%;
+.daily-date time {
+  font-weight: 680;
 }
-.daily-low,
-.daily-high {
-  width: 1%;
-  font-size: 15px;
-  font-weight: 600;
-}
-.daily-low {
+.daily-extremes {
+  display: inline-flex;
+  margin-left: auto;
+  gap: 8px;
+  white-space: nowrap;
+  font-size: 13px;
   color: var(--lavender);
 }
 .daily-high {
   color: var(--peach);
 }
-.daily-range {
-  position: relative;
-  display: block;
-  height: 4px;
-  min-width: 36px;
-  border-radius: 2px;
-  background: var(--surface0);
+.daily-period {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 9px;
+  padding-block: 0 15px;
 }
-.daily-range > span {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  min-width: 2px;
-  border-radius: inherit;
-  background: linear-gradient(to right, var(--lavender), var(--peach));
+.daily-period h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 16px;
+}
+.daily-period h3 span {
+  margin-left: 4px;
+  white-space: nowrap;
+  color: var(--subtext0);
+  font-size: 12px;
+  font-weight: 500;
+}
+.daily-period p {
+  margin: 4px 0 0;
+  font-size: 15px;
+  line-height: 1.45;
 }
 .daily-unavailable {
   margin: 0;
+  color: var(--subtext0);
 }

@@ -16,6 +16,8 @@ import {
   sunlightTile,
 } from "./sun";
 import { placeLabels } from "./placeLabels";
+import { Radar as RadarIcon } from "lucide-react";
+import Radar from "./Radar";
 import { drawSpace } from "./space";
 
 maplibregl.addProtocol("monsoon-sunlight", async () => ({
@@ -72,7 +74,7 @@ const formatPosition = (lat: number, lon: number) =>
 export default function Atlas(props: AtlasProps) {
   const host = useRef<HTMLDivElement>(null),
     sky = useRef<HTMLCanvasElement>(null),
-    map = useRef<maplibregl.Map | null>(null),
+    [map, setMap] = useState<maplibregl.Map | null>(null),
     pin = useRef<maplibregl.Marker | null>(null),
     latest = useRef(props),
     lastFocus = useRef(props.focus),
@@ -83,6 +85,7 @@ export default function Atlas(props: AtlasProps) {
     [layers, setLayers] = useState({
       satellite: true,
       borders: true,
+      radar: true,
       grid: false,
       streets: false,
       labels: true,
@@ -148,8 +151,8 @@ export default function Atlas(props: AtlasProps) {
   }
 
   useEffect(() => {
-    if (map.current?.getLayer("meridians")) syncVisibility(map.current);
-  }, [layers]);
+    if (map?.getLayer("meridians")) syncVisibility(map);
+  }, [layers, map]);
 
   useEffect(() => {
     const el = host.current;
@@ -192,7 +195,7 @@ export default function Atlas(props: AtlasProps) {
       return;
     }
 
-    map.current = m;
+    setMap(m);
     m.setPadding(padding);
     let instant = new Date();
     let sun = solarPosition(instant.getTime());
@@ -339,7 +342,7 @@ export default function Atlas(props: AtlasProps) {
       observer.disconnect();
       pin.current?.remove();
       pin.current = null;
-      map.current = null;
+      setMap(null);
       m.remove();
     };
   }, [attempt]);
@@ -354,24 +357,24 @@ export default function Atlas(props: AtlasProps) {
 
     if (lastFocus.current !== props.focus) {
       lastFocus.current = props.focus;
-      map.current?.easeTo({ center: [p.lon, p.lat], zoom: 6.2, duration: 550 });
+      map?.easeTo({ center: [p.lon, p.lat], zoom: 6.2, duration: 550 });
     }
-  }, [props.point, props.focus]);
+  }, [props.point, props.focus, map]);
 
   useEffect(() => {
-    map.current?.setPadding({
+    map?.setPadding({
       right: props.sidebar,
       left: 0,
       top: 60,
       bottom: 0,
     });
-  }, [props.sidebar]);
+  }, [props.sidebar, map]);
 
   const world = () => {
     const el = host.current;
     if (!el) return;
 
-    map.current?.easeTo({
+    map?.easeTo({
       zoom: Math.log2(
         Math.max(
           200,
@@ -402,6 +405,7 @@ export default function Atlas(props: AtlasProps) {
             {(
               [
                 ["satellite", "Satellite imagery"],
+                ["radar", "Precipitation radar"],
                 ["borders", "Country & regional borders"],
                 ["streets", "Street detail"],
                 ["labels", "Place labels"],
@@ -422,6 +426,17 @@ export default function Atlas(props: AtlasProps) {
           </div>
         )}
         <button
+          type="button"
+          className="radar-toggle"
+          aria-pressed={layers.radar}
+          onClick={() =>
+            setLayers((previous) => ({ ...previous, radar: !previous.radar }))
+          }
+        >
+          <RadarIcon size={16} aria-hidden="true" />
+          <span>Radar</span>
+        </button>
+        <button
           onClick={world}
           title="View entire globe"
           aria-label="World view"
@@ -432,7 +447,7 @@ export default function Atlas(props: AtlasProps) {
           aria-label="Center selected point"
           title="Center selected point"
           onClick={() =>
-            map.current?.easeTo({
+            map?.easeTo({
               center: [props.point.lon, props.point.lat],
               zoom: 6.2,
             })
@@ -441,6 +456,7 @@ export default function Atlas(props: AtlasProps) {
           ⌖
         </button>
       </div>
+      {layers.radar && map && <Radar map={map} />}
       <div className="map-readout">
         <strong>MAP CENTER</strong>
         <span>{position}</span>

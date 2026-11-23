@@ -686,6 +686,11 @@ export default function App() {
                 "https://aa.usno.navy.mil/faq/sun_approx",
               ],
               [
+                "RainViewer",
+                "Observed precipitation radar and radar coverage from RainViewer. Free for personal and educational use.",
+                "https://www.rainviewer.com/",
+              ],
+              [
                 "OpenFreeMap",
                 "Administrative borders and street cartography via OpenFreeMap and © OpenMapTiles, using Natural Earth and OpenStreetMap contributor data.",
                 "https://openfreemap.org/",

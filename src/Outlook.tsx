@@ -5,7 +5,8 @@ import LocationHeading from "./LocationHeading";
 import { describeDay } from "./dayStory";
 import Conditions, { WeatherBackground } from "./Conditions";
 import { forecastMinute } from "./minute";
-import { Button, Icon, WeatherArt } from "./ui";
+import { Button, Icon } from "./ui";
+import WeatherArt from "./WeatherArt";
 import type { ForecastHour, Place } from "./weather";
 
 const pixelsPerMinute = 4;
@@ -449,9 +450,12 @@ export default function Outlook({
               return (
                 <g key={m}>
                   {hour && (
-                    <svg x={labelX - 11} y={123} width={22} height={20}>
-                      <WeatherArt desc={hour.desc} day={hour.day} size={22} />
-                    </svg>
+                    <WeatherArt
+                      x={labelX - 13}
+                      y={120}
+                      desc={hour.desc}
+                      day={hour.day}
+                    />
                   )}
                   <text x={labelX} y={158} textAnchor="middle">
                     {dayAt(m)}

@@ -158,3 +158,154 @@ export function describeDay(
 
   return sentences.join(" ");
 }
+
+const directionNames: Record<string, string> = {
+  N: "North",
+  NE: "Northeast",
+  E: "East",
+  SE: "Southeast",
+  S: "South",
+  SW: "Southwest",
+  W: "West",
+  NW: "Northwest",
+};
+
+export function describePeriod(
+  hours: ForecastHour[],
+  daytime: boolean,
+  zone: string,
+  fahrenheit: boolean,
+) {
+  const clock = new Intl.DateTimeFormat("en-US", {
+    timeZone: zone,
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
+  const time = (hour: ForecastHour) =>
+    clock.format(hour.t * 1000).replace(":00", "");
+
+  // Compare the prevailing sky in each half so the wording follows the period in time.
+  function prevailing(readings: ForecastHour[]) {
+    const counts = new Map<string, number>();
+
+    for (const h of readings) {
+      if (h.desc !== "Conditions unavailable")
+        counts.set(h.desc, (counts.get(h.desc) ?? 0) + 1);
+    }
+
+    return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0];
+  }
+
+  const middle = Math.ceil(hours.length / 2);
+  const secondHalf = hours.slice(middle);
+  const early = prevailing(hours.slice(0, middle));
+  const late = prevailing(secondHalf);
+  let skies = early ?? late;
+
+  if (early && late && late !== early) {
+    const change = secondHalf.find((h) => h.desc === late)!;
+    skies = early + ", then " + late.toLowerCase() + " by " + time(change);
+  }
+
+  const temperatures = hours.map((h) => h.c);
+
+  const extreme = daytime
+    ? Math.max(...temperatures)
+    : Math.min(...temperatures);
+
+  const degrees = temp(extreme, fahrenheit) + (fahrenheit ? "°F" : "°C");
+  const temperature = (daytime ? "high near " : "low near ") + degrees;
+
+  const sentences = [
+    skies
+      ? skies + ", with a " + temperature + "."
+      : (daytime ? "High near " : "Low near ") + degrees + ".",
+  ];
+
+  const event =
+    hours.find((h) => /thunder/i.test(h.desc)) ??
+    hours.find((h) => /rain|snow|drizzle|shower/i.test(h.desc));
+
+  if (event && event.desc !== early && event.desc !== late)
+    sentences.push(event.desc + " around " + time(event) + ".");
+
+  const peakWind = hours.reduce<ForecastHour | undefined>(
+    (peak, h) => (h.kmh != null && (!peak || h.kmh > peak.kmh!) ? h : peak),
+    undefined,
+  );
+
+  if (peakWind) {
+    const speed = wind(peakWind.kmh, fahrenheit);
+    const unit = fahrenheit ? " mph" : " km/h";
+    const direction = directionNames[compass(peakWind.dir)];
+
+    const steadyDirection =
+      direction &&
+      hours.every(
+        (h) =>
+          h.kmh == null ||
+          h.kmh === 0 ||
+          compass(h.dir) === compass(peakWind.dir),
+      );
+
+    if (speed === 0) sentences.push("Calm winds.");
+    else if (steadyDirection) {
+      const steadySpeed = hours.every(
+        (h) => h.kmh == null || wind(h.kmh, fahrenheit) === speed,
+      );
+
+      sentences.push(
+        direction +
+          " wind " +
+          (steadySpeed ? "around " : "up to ") +
+          speed +
+          unit +
+          ".",
+      );
+    } else {
+      sentences.push(
+        "Winds reach " +
+          speed +
+          unit +
+          (direction ? " from the " + direction.toLowerCase() : "") +
+          " around " +
+          time(peakWind) +
+          ".",
+      );
+    }
+  }
+
+  const chances = hours.flatMap((h) => (h.rain == null ? [] : [h.rain]));
+  const chance = Math.max(...chances);
+
+  if (chance >= 20) {
+    const wetHours = hours.filter((h) =>
+      /rain|snow|drizzle|thunder/i.test(h.desc),
+    );
+
+    // The model gives an all-precipitation probability; only name a type when the wet hours agree.
+    const type = ["snow", "rain", "drizzle"].find(
+      (type) =>
+        wetHours.some((h) => h.rain === chance) &&
+        wetHours.every((h) => h.desc.toLowerCase().includes(type)),
+    );
+
+    sentences.push(
+      "Chance of " +
+        (type ?? "precipitation") +
+        " reaches " +
+        Math.round(chance) +
+        "%.",
+    );
+  }
+
+  return {
+    desc: event?.desc ?? early ?? late ?? "Conditions unavailable",
+    text: sentences.join(" "),
+    time:
+      hours.length === 1
+        ? time(hours[0])
+        : time(hours[0]) + " – " + time(hours.at(-1)!),
+  };
+}
