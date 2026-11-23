@@ -7,6 +7,9 @@ import {
   useState,
 } from "react";
 import type { PointerEvent } from "react";
+import { daylightIntervals } from "./sun";
+import LocationHeading from "./LocationHeading";
+import { describeDay } from "./dayStory";
 import Conditions from "./Conditions";
 import { forecastMinute } from "./minute";
 import { Button, Icon, WeatherArt } from "./ui";
@@ -49,6 +52,11 @@ export default function Outlook({
   const lastMinute = Math.max(
     0,
     Math.floor(((hours.at(-1)?.t ?? start) - start) / 60),
+  );
+
+  const daylight = useMemo(
+    () => daylightIntervals(start, lastMinute, point.lon, point.lat),
+    [start, lastMinute, point.lon, point.lat],
   );
 
   const viewport = useRef<HTMLDivElement>(null);
@@ -211,12 +219,30 @@ export default function Outlook({
 
   const dayAt = (m: number) => weekday.format((start + m * 60) * 1000);
   const timeAt = (m: number) => clock.format((start + m * 60) * 1000);
-  const minAt = samples.find((s) => s.value === min);
-  const maxAt = samples.find((s) => s.value === max);
   const pretty = (v: number) => Number(v.toFixed(1)) + unit;
 
-  const extremes =
-    minAt && maxAt ? [minAt, maxAt].sort((a, b) => a.offset - b.offset) : [];
+  const calendar = useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: zone,
+        weekday: "long",
+        month: "short",
+        day: "numeric",
+      }),
+    [zone],
+  );
+
+  const day = calendar.format(selected.t * 1000);
+
+  const story = useMemo(
+    () =>
+      describeDay(
+        hours.filter((h) => calendar.format(h.t * 1000) === day),
+        zone,
+        f,
+      ),
+    [hours, calendar, day, zone, f],
+  );
 
   function pick(event: PointerEvent<HTMLDivElement>) {
     const pos =
@@ -248,10 +274,8 @@ export default function Outlook({
         <Suspense fallback={null}>
           <ForecastSky t={selected.t} point={point} hour={selected.hour} />
         </Suspense>
-        <div className="minute-heading">
-          <h2 className="display">{point.name}</h2>
-          {saved && <small>Saved forecast</small>}
-        </div>
+        <LocationHeading point={point} />
+        {saved && <small>Saved forecast</small>}
         <Conditions
           t={selected.t}
           hour={selected.hour}
@@ -298,6 +322,7 @@ export default function Outlook({
           role="slider"
           tabIndex={0}
           aria-label="Forecast minute"
+          aria-description="Yellow bands mark daylight from sunrise to sunset at this point."
           aria-valuemin={0}
           aria-valuemax={lastMinute}
           aria-valuenow={minute}
@@ -344,6 +369,21 @@ export default function Outlook({
                 <stop offset="1" stopColor={color} stopOpacity=".035" />
               </linearGradient>
             </defs>
+            <g
+              className="daylight-bands"
+              fill="var(--yellow)"
+              fillOpacity={0.17}
+            >
+              {daylight.map(({ from, to }) => (
+                <rect
+                  key={from}
+                  x={x(from)}
+                  y={top}
+                  width={x(to) - x(from)}
+                  height={bottom - top}
+                />
+              ))}
+            </g>
             {[floor, (ceiling + floor) / 2, ceiling].map((v) => (
               <g key={v}>
                 <line
@@ -462,29 +502,10 @@ export default function Outlook({
             </g>
           </svg>
         </div>
-        {extremes.length > 0 && (
-          <p className="minute-story">
-            {min === max
-              ? metric +
-                " holds near " +
-                pretty(min) +
-                " across the available hours."
-              : metric +
-                (extremes[0] === minAt ? " rises from " : " falls from ") +
-                pretty(extremes[0].value!) +
-                " at " +
-                dayAt(extremes[0].offset) +
-                " " +
-                timeAt(extremes[0].offset) +
-                " to " +
-                pretty(extremes[1].value!) +
-                " at " +
-                dayAt(extremes[1].offset) +
-                " " +
-                timeAt(extremes[1].offset) +
-                "."}
-          </p>
-        )}
+        <section className="minute-story" aria-label="Daily outlook">
+          <h3>{day}</h3>
+          <p>{story}</p>
+        </section>
       </section>
       <div
         aria-hidden="true"

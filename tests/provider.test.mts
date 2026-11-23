@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import snapshot from "../src/reykjavik.json" with { type: "json" };
-import { forecast } from "../src/weather.ts";
+import { condition, forecast } from "../src/weather.ts";
 
 test("a US point gets current, daily and hourly forecasts in one Open-Meteo request", async (t) => {
   const now = Math.floor(Date.now() / 3600000) * 3600;
@@ -78,4 +78,22 @@ test("missing current and daily values remain unavailable", async (t) => {
   assert.equal(value.daily[0].low, null);
   assert.equal(value.hours.length, 1);
   assert.equal(value.hours[0].cloudCover, null);
+});
+
+test("weather codes distinguish fog, snowfall intensity, and thunderstorms", () => {
+  for (const code of [45, 48]) assert.equal(condition(code), "Fog");
+
+  for (const code of [95, 96, 99])
+    assert.equal(condition(code), "Thunderstorms");
+
+  assert.deepEqual([71, 73, 75, 77, 85, 86].map(condition), [
+    "Light snow",
+    "Snow",
+    "Heavy snow",
+    "Snow grains",
+    "Light snow showers",
+    "Heavy snow showers",
+  ]);
+
+  assert.equal(condition(100), "Conditions unavailable");
 });

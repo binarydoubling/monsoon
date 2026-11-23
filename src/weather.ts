@@ -78,18 +78,38 @@ type MeteoResponse = {
 
 export const home: Place = {
   name: "Reykjavík",
-  region: "Iceland",
+  region: "Capital Region, Iceland",
   lat: 64.1466,
   lon: -21.9426,
 };
 
 export const places: Place[] = [
   home,
-  { name: "Anchorage", region: "Alaska, US", lat: 61.2181, lon: -149.9003 },
-  { name: "Seattle", region: "Washington, US", lat: 47.6062, lon: -122.3321 },
-  { name: "Tokyo", region: "Japan", lat: 35.6762, lon: 139.6503 },
-  { name: "Cape Town", region: "South Africa", lat: -33.9249, lon: 18.4241 },
-  { name: "Wellington", region: "New Zealand", lat: -41.2865, lon: 174.7762 },
+  {
+    name: "Anchorage",
+    region: "Alaska, United States",
+    lat: 61.2181,
+    lon: -149.9003,
+  },
+  {
+    name: "Seattle",
+    region: "Washington, United States",
+    lat: 47.6062,
+    lon: -122.3321,
+  },
+  { name: "Tokyo", region: "Tokyo, Japan", lat: 35.6762, lon: 139.6503 },
+  {
+    name: "Cape Town",
+    region: "Western Cape, South Africa",
+    lat: -33.9249,
+    lon: 18.4241,
+  },
+  {
+    name: "Wellington",
+    region: "Wellington Region, New Zealand",
+    lat: -41.2865,
+    lon: 174.7762,
+  },
 ];
 
 export const coords = (p: Coordinates) =>
@@ -118,15 +138,20 @@ export function condition(n: number | null) {
   if (n === 1) return "Mostly clear";
   if (n === 2) return "Partly cloudy";
   if (n === 3) return "Overcast";
-  if (n <= 48) return "Fog";
-  if (n <= 57) return "Drizzle";
+  if (n === 45 || n === 48) return "Fog";
+  if ([51, 53, 55, 56, 57].includes(n)) return "Drizzle";
   if (n === 61) return "Light rain";
   if (n === 65) return "Heavy rain";
-  if (n <= 67) return "Rain";
-  if (n <= 77) return "Snow";
-  if (n <= 82) return "Rain showers";
-  if (n <= 86) return "Snow showers";
-  return "Thunderstorms";
+  if ([63, 66, 67].includes(n)) return "Rain";
+  if (n === 71) return "Light snow";
+  if (n === 75) return "Heavy snow";
+  if (n === 77) return "Snow grains";
+  if (n === 73) return "Snow";
+  if ([80, 81, 82].includes(n)) return "Rain showers";
+  if (n === 86) return "Heavy snow showers";
+  if (n === 85) return "Light snow showers";
+  if ([95, 96, 99].includes(n)) return "Thunderstorms";
+  return "Conditions unavailable";
 }
 
 export function temp(c: number, f: boolean, decimals = 0) {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Atlas from "./src/Atlas";
 import Outlook from "./src/Outlook";
+import LocationHeading from "./src/LocationHeading";
 import DailyForecast from "./src/DailyForecast";
 import {
   AtlasText,
@@ -15,14 +16,12 @@ import {
   line,
   accent,
   paper,
-  card,
 } from "./src/ui";
 import {
   home,
   places,
   seed,
   key,
-  coords,
   forecast,
   temp,
   getJSON,
@@ -142,19 +141,27 @@ export default function App() {
   }, [lat, lon, retry]);
 
   useEffect(() => {
-    if (!point.resolveName) return;
+    if (!point.resolveName && point.region !== "Selected coordinates") return;
     const ctrl = new AbortController();
 
     reverseGeocode(point, ctrl.signal)
       .then((label) => {
         if (!label || ctrl.signal.aborted) return;
-        const resolved = { lat: point.lat, lon: point.lon, ...label };
+
+        const resolved = {
+          lat: point.lat,
+          lon: point.lon,
+          name: point.resolveName ? label.name : point.name,
+          region: label.region,
+        };
+
         setPoint((current) => (current === point ? resolved : current));
 
         setSaved((items) =>
           items.map((p) =>
-            p.resolveName && key(p) === key(point)
-              ? { lat: p.lat, lon: p.lon, ...label }
+            (p.resolveName || p.region === "Selected coordinates") &&
+            key(p) === key(point)
+              ? { ...resolved, lat: p.lat, lon: p.lon }
               : p,
           ),
         );
@@ -460,6 +467,15 @@ export default function App() {
               >
                 Minute explorer
               </button>
+              <button
+                type="button"
+                className="save-location"
+                onClick={toggle}
+                aria-label={selected ? "Remove saved point" : "Save point"}
+                aria-pressed={selected}
+              >
+                <Icon name={selected ? "check" : "bookmark"} size={16} />
+              </button>
             </nav>
             {showMinutes && (
               <Outlook
@@ -484,123 +500,27 @@ export default function App() {
                 display: showMinutes ? "none" : undefined,
               }}
             >
-              <div
-                className="stack"
-                style={{
-                  paddingInline: 20,
-                  paddingBlock: small ? 10 : 18,
-                  gap: 10,
-                  backgroundColor: card,
-                }}
-              >
-                <div
-                  className="stack"
-                  style={{ ...row, justifyContent: "space-between" }}
-                >
-                  <div className="stack" style={{ ...row, gap: 7 }}>
-                    <Icon name="map-pin" size={13} color={accent} />
-                    <Label color={accent}>POINT FORECAST</Label>
-                  </div>
-                  <div className="stack" style={{ ...row, gap: 7 }}>
-                    <Button
-                      onClick={toggle}
-                      label={selected ? "Remove saved point" : "Save point"}
-                      aria-pressed={selected}
-                      style={{
-                        padding: 5,
-                        backgroundColor: selected ? "var(--surface0)" : paper,
-                        borderRadius: 4,
-                      }}
-                    >
-                      <Icon
-                        name={selected ? "check" : "bookmark"}
-                        size={16}
-                        color={selected ? accent : sub}
-                      />
-                    </Button>
-                    {small && (
-                      <Button
-                        label="Close forecast"
-                        onClick={() => setSheetOpen(false)}
-                        style={{ padding: 7 }}
-                      >
-                        <Icon name="x" size={18} />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-                <div className="stack">
-                  <AtlasText
-                    face="display"
-                    size={small ? 34 : 38}
-                    style={{ letterSpacing: -0.6 }}
-                  >
-                    {point.name}
-                  </AtlasText>
-                  <AtlasText color={sub} size={17}>
-                    {point.region}
-                  </AtlasText>
-                  {!point.resolveName && (
-                    <AtlasText
-                      face="mono"
-                      color={sub}
-                      size={13}
-                      style={{ marginTop: 6, letterSpacing: 0.5 }}
-                    >
-                      {coords(point)}
-                    </AtlasText>
-                  )}
-                </div>
-                {!data && (
-                  <div className="stack" style={{ paddingBlock: 26 }}>
-                    {state === "loading" ? (
-                      <span
-                        className="spinner"
-                        role="status"
-                        aria-label="Loading forecast"
-                      />
-                    ) : (
-                      <AtlasText>
-                        Forecast unavailable for this point.
-                      </AtlasText>
-                    )}
-                  </div>
-                )}
-                <div
-                  className="stack"
-                  style={{ ...row, gap: 6, marginTop: 6, flexWrap: "wrap" }}
-                >
-                  <div
-                    className="stack"
-                    style={{
-                      width: 6,
-                      height: 6,
-                      borderRadius: 3,
-                      backgroundColor:
-                        state === "live" ? "var(--green)" : "var(--peach)",
-                    }}
-                  />
-                  <AtlasText size={13} color={sub}>
-                    {data?.source || "Point forecast"}
-                    {data === seed
-                      ? " · saved forecast"
-                      : state === "offline"
-                        ? data
-                          ? " · saved forecast"
-                          : " · offline"
-                        : state === "loading"
-                          ? " · updating"
-                          : ""}
-                  </AtlasText>
-                  {state === "offline" && (
-                    <Button onClick={() => setRetry((v) => v + 1)}>
-                      <AtlasText size={14} color={accent}>
-                        Retry
-                      </AtlasText>
-                    </Button>
-                  )}
-                </div>
+              <div className="overview-location">
+                <LocationHeading point={point} />
               </div>
+              {!data && (
+                <div className="stack" style={{ paddingBlock: 26 }}>
+                  {state === "loading" ? (
+                    <span
+                      className="spinner"
+                      role="status"
+                      aria-label="Loading forecast"
+                    />
+                  ) : (
+                    <AtlasText>Forecast unavailable for this point.</AtlasText>
+                  )}
+                </div>
+              )}
+              {state === "offline" && (
+                <Button onClick={() => setRetry((v) => v + 1)}>
+                  Retry forecast
+                </Button>
+              )}
               {data && (
                 <DailyForecast
                   point={point}

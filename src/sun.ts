@@ -39,6 +39,31 @@ export function solarElevation(sun: Sun, lon: number, lat: number) {
   return Math.asin(Math.min(1, Math.max(-1, sine))) / radians;
 }
 
+export function daylightIntervals(
+  startSeconds: number,
+  lastMinute: number,
+  lon: number,
+  lat: number,
+) {
+  const intervals: { from: number; to: number }[] = [];
+  let from: number | undefined;
+
+  for (let minute = 0; minute < lastMinute; minute++) {
+    const sun = solarPosition((startSeconds + minute * 60) * 1000);
+
+    // USNO apparent sunrise/set: solar center 50 arcminutes below a level horizon.
+    if (solarElevation(sun, lon, lat) >= -50 / 60) {
+      from ??= minute;
+    } else if (from !== undefined) {
+      intervals.push({ from, to: minute });
+      from = undefined;
+    }
+  }
+
+  if (from !== undefined) intervals.push({ from, to: lastMinute });
+  return intervals;
+}
+
 // MapLibre's atmosphere takes the incoming light direction in spherical scene coordinates.
 export function atmospherePosition(sun: Sun): [number, number, number] {
   const latitude = sun.lat * radians;

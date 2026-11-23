@@ -222,11 +222,6 @@ body,
   padding: 16px;
   background: var(--mantle);
 }
-.minute-heading h2 {
-  margin: 0;
-  font-size: 26px;
-  overflow-wrap: anywhere;
-}
 .minute-arrows,
 .minute-metrics {
   display: flex;
@@ -288,12 +283,7 @@ body,
     transparent 78%
   );
 }
-.minute-heading {
-  text-shadow: 0 1px 4px var(--crust);
-}
-.minute-heading {
-  margin-bottom: 14px;
-}
+
 .minute-graph .cursor-time text {
   fill: var(--crust);
   font: 600 12px var(--font-body);
@@ -303,4 +293,49 @@ body,
   .forecast-sky {
     height: 285px;
   }
+}
+
+.location-heading {
+  margin: 0 0 12px;
+}
+.location-heading div,
+.location-heading p {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.location-heading svg {
+  flex-shrink: 0;
+}
+.location-heading h2 {
+  font-size: 22px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.location-heading p {
+  margin: 3px 0 0 25px;
+  flex-wrap: wrap;
+  gap: 3px 12px;
+  font-size: 14px;
+  color: var(--subtext0);
+}
+.minute-stage .location-heading {
+  text-shadow: 0 1px 4px var(--crust);
+}
+.overview-location {
+  padding: 16px 16px 0;
+}
+.overview-location .location-heading {
+  margin: 0;
+}
+.forecast-views .save-location {
+  flex: 0 0 40px;
+}
+.minute-story h3 {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.minute-story p {
+  margin: 0;
+  color: var(--subtext0);
 }

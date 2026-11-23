@@ -6,6 +6,7 @@ import {
   Scene,
   ShaderMaterial,
   Vector2,
+  Vector3,
   WebGLRenderer,
 } from "three";
 import { radians, solarElevation, solarPosition } from "./sun";
@@ -28,6 +29,8 @@ const fragmentShader = `
   uniform vec2 drift;
   uniform float rain;
   uniform float elapsed;
+  uniform vec3 snowFogStorm;
+  uniform float stormTime;
 
   float hash(vec2 p) {
     vec3 q = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
@@ -64,6 +67,29 @@ const fragmentShader = `
     float streak = 1. - smoothstep(.015, .085, abs(fract(p.x) - center));
     float tail = 1. - smoothstep(.015, .32, fract(p.y));
     return streak * tail * step(hash(cell + 9.), rain);
+  }
+
+  float snowLayer(vec2 uv, float scale, float speed, float amount) {
+    vec2 p = uv * vec2(aspect, 1.) * scale;
+    p.y += elapsed * speed;
+    p.x -= elapsed * speed * .22 + .24 * sin(p.y * .42 + elapsed * .65);
+    vec2 cell = floor(p);
+    vec2 center = .22 + .56 * vec2(hash(cell + scale), hash(cell + 29.));
+    float radius = mix(.033, .085, hash(cell + 14.));
+    return (1. - smoothstep(radius * .4, radius, length(fract(p) - center)))
+         * step(hash(cell + 5.), amount);
+  }
+
+  float lightning(vec2 uv, float seed) {
+    float y = uv.y;
+    float root = mix(.22, .84, hash(vec2(seed, 12.)));
+    float bend = noise2(vec2(y * 17., seed)) * .048 + noise2(vec2(y * 51., seed)) * .017;
+    float path = root + bend - (1. - y) * .13;
+    float trunk = abs(uv.x - path) * aspect;
+    float fork = abs(uv.x - path - (.68 - y) * .28) * aspect;
+    float bolt = exp(-trunk * 370.) * smoothstep(.22, .36, y);
+    bolt += .62 * exp(-fork * 520.) * smoothstep(.46, .53, y) * step(y, .68);
+    return bolt * (1. - smoothstep(.86, .98, y));
   }
 
   void main() {
@@ -108,6 +134,24 @@ const fragmentShader = `
     float cirrus = smoothstep(.55,.72,turbulence(plane * vec2(1.8,8.) + drift * .36));
     sky = mix(sky, bright, cirrus * cover * .28);
     sky = mix(sky, cloud, density * .96);
+    float fog = snowFogStorm.y;
+    if (fog > .002) {
+      float bank = turbulence(uv * vec2(aspect * 2.8, 6.) + drift * .7);
+      float veil = clamp(.55 + .38 * (1. - uv.y) + (bank - .5) * .6, 0., .96);
+      vec3 mist = mix(vec3(.22,.26,.34), vec3(.76,.80,.83), day);
+      sky = mix(sky, mist, fog * veil);
+    }
+    if (snowFogStorm.z > .002) {
+      float age = mod(stormTime, 8.);
+      float glow = smoothstep(.18,.32,age) * exp(-max(0.,age - .32) * 4.);
+      float bolt = lightning(uv, floor(stormTime / 8.) + 1.);
+      sky += vec3(.65,.69,.93) * glow * snowFogStorm.z * (.09 * density + bolt);
+    }
+    if (snowFogStorm.x > .002) {
+      float flakes = .60 * snowLayer(uv, 43., 1.6, snowFogStorm.x);
+      flakes += snowLayer(uv + .37, 20., 2.5, snowFogStorm.x);
+      sky = mix(sky, vec3(.93,.95,1.), clamp(flakes, 0., .95));
+    }
     float drops = rainLayer(uv, 62., 3.9) + .6 * rainLayer(uv + .27, 97., 2.8);
     sky = mix(sky, vec3(.74,.82,.93), clamp(drops * (.34 + .28 * rain), 0., .82));
     sky += (hash(gl_FragCoord.xy) - .5) / 255.;
@@ -157,14 +201,49 @@ export default function ForecastSky({
           ? 0.7
           : 0;
 
+  const snow = /snow/i.test(desc)
+    ? /heavy/i.test(desc)
+      ? 0.96
+      : /light|grains/i.test(desc)
+        ? 0.28
+        : 0.65
+    : 0;
+
+  const fog = /fog/i.test(desc) ? 1 : 0;
+  const storm = /thunder/i.test(desc) ? 1 : 0;
+
   const wind = Math.min(100, hour?.kmh ?? 8);
   const frame = useRef<() => void>(() => {});
-  const state = useRef({ elevation, sunX, sunY, cover, rain, wind, point });
+
+  const state = useRef({
+    elevation,
+    sunX,
+    sunY,
+    cover,
+    rain,
+    snow,
+    fog,
+    storm,
+    wind,
+    point,
+  });
 
   useEffect(() => {
-    state.current = { elevation, sunX, sunY, cover, rain, wind, point };
+    state.current = {
+      elevation,
+      sunX,
+      sunY,
+      cover,
+      rain,
+      snow,
+      fog,
+      storm,
+      wind,
+      point,
+    };
+
     frame.current();
-  }, [elevation, sunX, sunY, cover, rain, wind, point]);
+  }, [elevation, sunX, sunY, cover, rain, snow, fog, storm, wind, point]);
 
   useEffect(() => {
     const container = host.current;
@@ -192,6 +271,8 @@ export default function ForecastSky({
       cover: { value: 0 },
       rain: { value: 0 },
       elapsed: { value: 0 },
+      snowFogStorm: { value: new Vector3() },
+      stormTime: { value: 0 },
       aspect: { value: 1 },
       drift: { value: new Vector2() },
     };
@@ -235,7 +316,19 @@ export default function ForecastSky({
 
       const dt = motion.matches ? 0 : Math.min(elapsed, 100) / 1000;
       lastDraw = now;
-      const { elevation, sunX, sunY, cover, rain, wind, point } = state.current;
+
+      const {
+        elevation,
+        sunX,
+        sunY,
+        cover,
+        rain,
+        snow,
+        fog,
+        storm,
+        wind,
+        point,
+      } = state.current;
 
       const width = canvas.clientWidth,
         height = canvas.clientHeight;
@@ -255,6 +348,18 @@ export default function ForecastSky({
       uniforms.elevation.value += (elevation - uniforms.elevation.value) * mix;
       uniforms.cover.value += (cover - uniforms.cover.value) * mix;
       uniforms.rain.value += (rain - uniforms.rain.value) * mix;
+      const effects = uniforms.snowFogStorm.value;
+      effects.x += (snow - effects.x) * mix;
+      effects.y += (fog - effects.y) * mix;
+      effects.z += (storm - effects.z) * mix;
+
+      // Keep a still bolt for reduced motion. Restart the distant strike cycle on storm entry.
+      uniforms.stormTime.value = motion.matches
+        ? 0.38
+        : storm
+          ? uniforms.stormTime.value + dt
+          : 0;
+
       uniforms.elapsed.value += dt;
       drift += dt * (0.025 + wind * 0.0015);
 

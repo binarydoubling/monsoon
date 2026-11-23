@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { solarElevation, solarPosition } from "../src/sun.ts";
+import {
+  daylightIntervals,
+  solarElevation,
+  solarPosition,
+} from "../src/sun.ts";
 
 // USNO Celestial Navigation almanac: observer longitude/latitude, solar GHA,
 // declination and computed altitude in degrees. East longitude is positive.
@@ -54,3 +58,24 @@ for (const observation of observations) {
     );
   });
 }
+
+test("daylight bands follow local sunrise and sunset across the chart edges", () => {
+  const start = Date.parse("2024-03-20T12:00:00Z") / 1000;
+  const bands = daylightIntervals(start, 1440, 0, 0);
+  assert.equal(bands.length, 2);
+  assert.equal(bands[0].from, 0);
+  assert.ok(Math.abs(bands[0].to - 371) < 3);
+  assert.ok(Math.abs(bands[1].from - 1084) < 3);
+  assert.equal(bands[1].to, 1440);
+  assert.equal(daylightIntervals(start, 1440, 180, 0).length, 1);
+});
+
+test("polar daylight spans the full plot and polar night leaves it dark", () => {
+  const start = Date.parse("2024-06-21T00:00:00Z") / 1000;
+
+  assert.deepEqual(daylightIntervals(start, 2880, 15, 78), [
+    { from: 0, to: 2880 },
+  ]);
+
+  assert.deepEqual(daylightIntervals(start, 2880, 15, -78), []);
+});

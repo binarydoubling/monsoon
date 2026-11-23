@@ -221,6 +221,23 @@ export function WeatherArt({ desc = "", day = true, size = 70 }) {
           />
         </g>
       )}
+      {/fog/i.test(desc) && (
+        <path
+          d="M13 53h48 M23 59h53 M10 65h42"
+          fill="none"
+          stroke="var(--subtext0)"
+          strokeWidth="3"
+          strokeLinecap="round"
+        />
+      )}
+      {/thunder/i.test(desc) && (
+        <path
+          d="M47 40 34 57h8l-4 13 17-21h-9l6-9z"
+          fill="var(--yellow)"
+          stroke="var(--mantle)"
+          strokeWidth="1.3"
+        />
+      )}
       {(wet || snowy) &&
         [21, 33, 45, 57].map((x, i) =>
           snowy ? (
