@@ -1,6 +1,5 @@
 .daily-overview {
   container-type: inline-size;
-  padding: 16px;
   font-variant-numeric: tabular-nums;
 }
 .daily-layout {
@@ -10,9 +9,21 @@
 .daily-layout section {
   min-width: 0;
 }
-.daily-layout h2 {
+.daily-layout > div > h2,
+.daily-week > h2 {
   margin: 0 0 8px;
   font-size: 18px;
+}
+.current-weather {
+  position: relative;
+  isolation: isolate;
+  padding: 16px 16px 0;
+}
+.daily-week {
+  padding-inline: 16px;
+}
+.current-weather h2 {
+  text-shadow: 0 1px 5px var(--crust);
 }
 .daily-week thead,
 .daily-unavailable {

@@ -1,4 +1,9 @@
-import type { StyleSpecification, LayerSpecification } from "maplibre-gl";
+import type {
+  FilterSpecification,
+  LayerSpecification,
+  StyleSpecification,
+} from "maplibre-gl";
+import { localPlaceZoom, placeLabels } from "./placeLabels";
 import { atmospherePosition, solarPosition } from "./sun";
 
 const lat = (y: number) =>
@@ -40,6 +45,83 @@ const imagery: LayerSpecification[] = Object.entries(imageryMinZoom).map(
   }),
 );
 
+const boundaryLine = {
+  type: "line",
+  source: "openmaptiles",
+  "source-layer": "boundary",
+} as const;
+
+const landBorder: FilterSpecification = [
+  "all",
+  ["==", ["geometry-type"], "LineString"],
+  ["!=", ["get", "maritime"], 1],
+  ["!", ["has", "claimed_by"]],
+];
+
+const countryBorder: FilterSpecification = [
+  "all",
+  landBorder,
+  ["==", ["get", "admin_level"], 2],
+  ["!=", ["get", "disputed"], 1],
+];
+
+export const borderLayers: LayerSpecification[] = [
+  {
+    ...boundaryLine,
+    id: "state-province-borders",
+    minzoom: 2,
+    filter: [
+      "all",
+      landBorder,
+      ["in", ["get", "admin_level"], ["literal", [3, 4]]],
+      ["!=", ["get", "disputed"], 1],
+    ],
+    paint: {
+      "line-color": "#cdd6f4",
+      "line-opacity": ["interpolate", ["linear"], ["zoom"], 2, 0.36, 5, 0.82],
+      "line-width": ["interpolate", ["linear"], ["zoom"], 2, 0.75, 8, 1.45],
+      "line-dasharray": [4, 2],
+    },
+  },
+  {
+    ...boundaryLine,
+    id: "country-border-casing",
+    filter: countryBorder,
+    paint: {
+      "line-color": "#11111b",
+      "line-opacity": 0.65,
+      "line-width": ["interpolate", ["linear"], ["zoom"], 0, 1.55, 8, 3.25],
+    },
+  },
+  {
+    ...boundaryLine,
+    id: "country-borders",
+    filter: countryBorder,
+    paint: {
+      "line-color": "#efe9df",
+      "line-opacity": 0.88,
+      "line-width": ["interpolate", ["linear"], ["zoom"], 0, 0.7, 8, 1.65],
+    },
+  },
+  {
+    ...boundaryLine,
+    id: "disputed-borders",
+    filter: [
+      "all",
+      ["==", ["geometry-type"], "LineString"],
+      ["!=", ["get", "maritime"], 1],
+      ["==", ["get", "disputed"], 1],
+      ["in", ["get", "admin_level"], ["literal", [2, 3, 4]]],
+    ],
+    paint: {
+      "line-color": "#f5e0dc",
+      "line-opacity": 0.85,
+      "line-dasharray": [2, 3],
+      "line-width": ["interpolate", ["linear"], ["zoom"], 0, 0.85, 8, 1.6],
+    },
+  },
+];
+
 export function atlasStyle(
   pixelRatio: number,
   detail?: StyleSpecification,
@@ -65,15 +147,29 @@ export function atlasStyle(
     },
   ];
 
-  const streets = (detail?.layers ?? []).map((layer) => ({
-    ...layer,
-    minzoom: Math.max(layer.minzoom ?? 0, 5.8),
-  }));
+  const streets = (detail?.layers ?? [])
+    .filter(
+      (layer) =>
+        !(layer.type === "line" && layer["source-layer"] === "boundary") &&
+        !(
+          layer.type === "symbol" &&
+          layer["source-layer"] === "place" &&
+          (layer.id.startsWith("label_country_") || layer.id === "label_state")
+        ),
+    )
+    .map((layer) => ({
+      ...layer,
+      minzoom: Math.max(
+        layer.minzoom ?? 0,
+        layer.type === "symbol" && layer["source-layer"] === "place"
+          ? localPlaceZoom
+          : 5.8,
+      ),
+    }));
 
   const overlay = (layer: LayerSpecification) =>
     layer.type === "symbol" ||
-    (layer.type === "line" &&
-      ["boundary", "transportation"].includes(layer["source-layer"] ?? ""));
+    (layer.type === "line" && layer["source-layer"] === "transportation");
 
   return {
     version: 8,
@@ -104,7 +200,17 @@ export function atlasStyle(
     },
     ...(detail ? { glyphs: detail.glyphs, sprite: detail.sprite } : {}),
     sources: {
+      openmaptiles: {
+        type: "vector",
+        url: "https://tiles.openfreemap.org/planet",
+      },
       ...detail?.sources,
+      "atlas-places": {
+        type: "geojson",
+        data: "/maps/place-labels.geojson",
+        attribution:
+          '<a href="https://www.naturalearthdata.com/">Natural Earth</a>',
+      },
       sunlight: {
         type: "raster",
         tiles: ["monsoon-sunlight://earth/{z}/{x}/{y}"],
@@ -205,7 +311,13 @@ export function atlasStyle(
           "raster-opacity-transition": { duration: 0 },
         },
       },
+      ...borderLayers,
       ...streets.filter(overlay),
+      ...placeLabels.map((layer) =>
+        detail && layer.id === "population-city-labels"
+          ? { ...layer, maxzoom: localPlaceZoom }
+          : layer,
+      ),
       {
         id: "meridians",
         type: "line",

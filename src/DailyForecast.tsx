@@ -1,5 +1,7 @@
-import Conditions from "./Conditions";
-import type { Coordinates, Forecast } from "./weather";
+import { useEffect, useState } from "react";
+import Conditions, { WeatherBackground } from "./Conditions";
+import LocationHeading from "./LocationHeading";
+import type { Place, Forecast, ForecastHour } from "./weather";
 import { temp } from "./weather";
 import { WeatherArt } from "./ui";
 import "./daily.css";
@@ -14,6 +16,60 @@ const fullDate = new Intl.DateTimeFormat("en-US", {
   timeZone: "UTC",
 });
 
+function CurrentConditions({
+  hour,
+  point,
+  zone,
+  fahrenheit,
+  label,
+}: {
+  hour: ForecastHour;
+  point: Place;
+  zone: string;
+  fahrenheit: boolean;
+  label: string;
+}) {
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
+
+  useEffect(() => {
+    let timer: number;
+
+    function tick() {
+      window.clearTimeout(timer);
+      if (document.hidden) return;
+
+      const ms = Date.now();
+      setNow(Math.floor(ms / 1000));
+      timer = window.setTimeout(tick, 1000 - (ms % 1000));
+    }
+
+    tick();
+    document.addEventListener("visibilitychange", tick);
+
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, []);
+
+  return (
+    <div className="current-weather">
+      <WeatherBackground t={now} point={point} hour={hour} />
+      <LocationHeading point={point} />
+      <h2 className="display">{label}</h2>
+      <Conditions
+        hour={hour}
+        t={now}
+        point={point}
+        zone={zone}
+        fahrenheit={fahrenheit}
+        label={label}
+        showSeconds
+      />
+    </div>
+  );
+}
+
 export default function DailyForecast({
   forecast,
   point,
@@ -21,7 +77,7 @@ export default function DailyForecast({
   saved = false,
 }: {
   forecast: Forecast;
-  point: Coordinates;
+  point: Place;
   fahrenheit: boolean;
   saved?: boolean;
 }) {
@@ -38,21 +94,21 @@ export default function DailyForecast({
   return (
     <div className="daily-overview">
       <div className="daily-layout">
-        <div>
-          <h2 className="display">{heading}</h2>
-          {current ? (
-            <Conditions
-              hour={current}
-              t={current.t}
-              point={point}
-              zone={zone}
-              fahrenheit={fahrenheit}
-              label={heading}
-            />
-          ) : (
+        {current ? (
+          <CurrentConditions
+            hour={current}
+            point={point}
+            zone={zone}
+            fahrenheit={fahrenheit}
+            label={heading}
+          />
+        ) : (
+          <div className="current-weather">
+            <LocationHeading point={point} />
+            <h2 className="display">{heading}</h2>
             <p className="daily-unavailable">Current conditions unavailable.</p>
-          )}
-        </div>
+          </div>
+        )}
         <section className="daily-week" aria-label="Daily forecast">
           <h2 className="display">Daily forecast</h2>
           {daily.length ? (

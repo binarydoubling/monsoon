@@ -3,13 +3,19 @@ import maplibregl, { type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./atlas.css";
 import type { Place } from "./weather";
-import { atlasStyle, imageryLayers, providerURL } from "./basemap";
+import {
+  atlasStyle,
+  borderLayers,
+  imageryLayers,
+  providerURL,
+} from "./basemap";
 import {
   atmospherePosition,
   solarElevation,
   solarPosition,
   sunlightTile,
 } from "./sun";
+import { placeLabels } from "./placeLabels";
 import { drawSpace } from "./space";
 
 maplibregl.addProtocol("monsoon-sunlight", async () => ({
@@ -76,6 +82,7 @@ export default function Atlas(props: AtlasProps) {
     [menuOpen, setMenuOpen] = useState(false),
     [layers, setLayers] = useState({
       satellite: true,
+      borders: true,
       grid: false,
       streets: false,
       labels: true,
@@ -107,6 +114,14 @@ export default function Atlas(props: AtlasProps) {
           "visibility",
           prefs.satellite ? "visible" : "none",
         );
+    }
+
+    for (const { id } of borderLayers) {
+      m.setLayoutProperty(id, "visibility", prefs.borders ? "visible" : "none");
+    }
+
+    for (const { id } of placeLabels) {
+      m.setLayoutProperty(id, "visibility", prefs.labels ? "visible" : "none");
     }
 
     if (m.getLayer("meridians"))
@@ -387,6 +402,7 @@ export default function Atlas(props: AtlasProps) {
             {(
               [
                 ["satellite", "Satellite imagery"],
+                ["borders", "Country & regional borders"],
                 ["streets", "Street detail"],
                 ["labels", "Place labels"],
                 ["grid", "Coordinate grid"],

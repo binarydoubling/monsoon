@@ -1,21 +1,12 @@
-import {
-  lazy,
-  Suspense,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent } from "react";
 import { daylightIntervals } from "./sun";
 import LocationHeading from "./LocationHeading";
 import { describeDay } from "./dayStory";
-import Conditions from "./Conditions";
+import Conditions, { WeatherBackground } from "./Conditions";
 import { forecastMinute } from "./minute";
 import { Button, Icon, WeatherArt } from "./ui";
 import type { ForecastHour, Place } from "./weather";
-
-const ForecastSky = lazy(() => import("./ForecastSky"));
 
 const pixelsPerMinute = 4;
 const metrics = ["Temperature", "Precipitation", "Wind"] as const;
@@ -271,9 +262,7 @@ export default function Outlook({
         className="minute-stage"
         aria-label="Minute forecast"
       >
-        <Suspense fallback={null}>
-          <ForecastSky t={selected.t} point={point} hour={selected.hour} />
-        </Suspense>
+        <WeatherBackground t={selected.t} point={point} hour={selected.hour} />
         <LocationHeading point={point} />
         {saved && <small>Saved forecast</small>}
         <Conditions

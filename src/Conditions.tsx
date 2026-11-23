@@ -1,8 +1,24 @@
-import { useMemo, type ReactNode } from "react";
+import {
+  lazy,
+  Suspense,
+  useMemo,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import { solarElevation, solarPosition } from "./sun";
 import { compass, temp, wind } from "./weather";
 import type { Coordinates, ForecastHour } from "./weather";
 import "./minute-clock.css";
+
+const ForecastSky = lazy(() => import("./ForecastSky"));
+
+export function WeatherBackground(props: ComponentProps<typeof ForecastSky>) {
+  return (
+    <Suspense fallback={null}>
+      <ForecastSky {...props} />
+    </Suspense>
+  );
+}
 
 export default function Conditions({
   hour,
@@ -12,6 +28,7 @@ export default function Conditions({
   zone,
   fahrenheit,
   children,
+  showSeconds = false,
 }: {
   hour?: ForecastHour;
   t: number;
@@ -20,6 +37,7 @@ export default function Conditions({
   zone: string;
   fahrenheit: boolean;
   children?: ReactNode;
+  showSeconds?: boolean;
 }) {
   const formatter = useMemo(
     () =>
@@ -30,10 +48,11 @@ export default function Conditions({
         day: "numeric",
         hour: "numeric",
         minute: "2-digit",
+        second: showSeconds ? "2-digit" : undefined,
         hour12: true,
         timeZoneName: "short",
       }),
-    [zone],
+    [zone, showSeconds],
   );
 
   const instant = new Date(t * 1000);
@@ -87,6 +106,9 @@ export default function Conditions({
           <span className="minute-clock-face">
             <span className="minute-digits">
               {parts.hour}:{parts.minute}
+              {showSeconds && (
+                <span className="clock-seconds">:{parts.second}</span>
+              )}
             </span>
             <span className="minute-clock-suffix">
               <span>{parts.dayPeriod}</span>

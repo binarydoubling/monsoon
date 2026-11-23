@@ -319,7 +319,8 @@ body,
   font-size: 14px;
   color: var(--subtext0);
 }
-.minute-stage .location-heading {
+.minute-stage .location-heading,
+.current-weather .location-heading {
   text-shadow: 0 1px 4px var(--crust);
 }
 .overview-location {

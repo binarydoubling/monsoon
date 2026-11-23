@@ -500,9 +500,11 @@ export default function App() {
                 display: showMinutes ? "none" : undefined,
               }}
             >
-              <div className="overview-location">
-                <LocationHeading point={point} />
-              </div>
+              {!data && (
+                <div className="overview-location">
+                  <LocationHeading point={point} />
+                </div>
+              )}
               {!data && (
                 <div className="stack" style={{ paddingBlock: 26 }}>
                   {state === "loading" ? (
@@ -516,18 +518,18 @@ export default function App() {
                   )}
                 </div>
               )}
-              {state === "offline" && (
-                <Button onClick={() => setRetry((v) => v + 1)}>
-                  Retry forecast
-                </Button>
-              )}
-              {data && (
+              {data && !showMinutes && (
                 <DailyForecast
                   point={point}
                   forecast={data}
                   fahrenheit={unit}
                   saved={data === seed || state === "offline"}
                 />
+              )}
+              {state === "offline" && (
+                <Button onClick={() => setRetry((v) => v + 1)}>
+                  Retry forecast
+                </Button>
               )}
               <Button
                 onClick={() => setModal("sources")}
@@ -685,7 +687,7 @@ export default function App() {
               ],
               [
                 "OpenFreeMap",
-                "Street cartography © OpenMapTiles, with data from OpenStreetMap contributors. Rendered by MapLibre.",
+                "Administrative borders and street cartography via OpenFreeMap and © OpenMapTiles, using Natural Earth and OpenStreetMap contributor data.",
                 "https://openfreemap.org/",
               ],
               [
@@ -705,7 +707,7 @@ export default function App() {
               ],
               [
                 "Natural Earth",
-                "Public-domain coastlines and geographic names.",
+                "Public-domain coastlines, country and subdivision abbreviation points, and city labels ranked by estimated metropolitan population.",
                 "https://www.naturalearthdata.com/",
               ],
               [
