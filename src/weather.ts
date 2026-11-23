@@ -14,6 +14,8 @@ export interface Place extends Coordinates {
 export interface ForecastHour {
   t: number;
   c: number;
+  feelsLikeC?: number | null;
+  precipMmPerHour?: number | null;
   hum: number | null;
   rain: number | null;
   kmh: number | null;
@@ -42,6 +44,8 @@ export interface Forecast {
 
 const weatherVariables = [
   "temperature_2m",
+  "apparent_temperature",
+  "precipitation",
   "relative_humidity_2m",
   "precipitation_probability",
   "wind_speed_10m",
@@ -61,14 +65,12 @@ const dailyVariables = [
 
 type WeatherVariable = (typeof weatherVariables)[number];
 
-type WeatherValues<T> = Record<Exclude<WeatherVariable, "cloud_cover">, T> & {
-  cloud_cover?: T;
-};
+type WeatherValues<T> = Partial<Record<WeatherVariable, T>>;
 
 type MeteoResponse = {
   timezone: string;
   utc_offset_seconds: number;
-  current?: { time: number } & WeatherValues<number | null>;
+  current?: { time: number; interval?: number } & WeatherValues<number | null>;
   daily?: { time: number[] } & Record<
     (typeof dailyVariables)[number],
     (number | null)[]
@@ -243,14 +245,21 @@ export async function reverseGeocode(p: Coordinates, signal: AbortSignal) {
 
 function reading(
   t: number,
+  intervalSeconds: number | undefined,
   value: (key: WeatherVariable) => number | null,
 ): ForecastHour | null {
   const c = value("temperature_2m");
+  const amount = value("precipitation");
   if (!Number.isFinite(t) || c == null || !Number.isFinite(c)) return null;
 
   return {
     t,
     c,
+    feelsLikeC: value("apparent_temperature"),
+    precipMmPerHour:
+      amount != null && intervalSeconds != null && intervalSeconds > 0
+        ? (amount * 3600) / intervalSeconds
+        : null,
     hum: value("relative_humidity_2m"),
     rain: value("precipitation_probability"),
     kmh: value("wind_speed_10m"),
@@ -269,7 +278,7 @@ function meteo(data: MeteoResponse): Forecast {
     source: "Open-Meteo",
     zone: data.timezone,
     current: current
-      ? reading(current.time, (key) => current[key] ?? null)
+      ? reading(current.time, current.interval, (key) => current[key] ?? null)
       : null,
     daily:
       daily?.time.map((t, i) => ({
@@ -283,7 +292,7 @@ function meteo(data: MeteoResponse): Forecast {
         desc: condition(daily.weather_code[i]),
       })) ?? [],
     hours: hourly.time
-      .map((t, i) => reading(t, (key) => hourly[key]?.[i] ?? null))
+      .map((t, i) => reading(t, 3600, (key) => hourly[key]?.[i] ?? null))
       .filter((h) => h !== null),
   };
 }

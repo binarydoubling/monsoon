@@ -1,7 +1,6 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent } from "react";
 import { daylightIntervals } from "./sun";
-import LocationHeading from "./LocationHeading";
 import { describeDay } from "./dayStory";
 import Conditions, { WeatherBackground } from "./Conditions";
 import { forecastMinute } from "./minute";
@@ -264,12 +263,11 @@ export default function Outlook({
         aria-label="Minute forecast"
       >
         <WeatherBackground t={selected.t} point={point} hour={selected.hour} />
-        <LocationHeading point={point} />
-        {saved && <small>Saved forecast</small>}
         <Conditions
           t={selected.t}
           hour={selected.hour}
           label="Selected minute conditions"
+          heading={saved && <small>Saved forecast</small>}
           point={point}
           zone={zone}
           fahrenheit={f}

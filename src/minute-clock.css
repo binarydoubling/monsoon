@@ -1,12 +1,28 @@
 .hour-details {
   container-type: inline-size;
 }
+.conditions-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.conditions-header .location-heading {
+  margin: 0;
+}
 .conditions-hero {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 4px 10px;
+  display: grid;
+  grid-template-columns: clamp(44px, 12cqi, 64px) minmax(0, 1fr) auto;
+  column-gap: 4px;
+  align-items: center;
+  margin: 4px 0 12px;
+}
+.conditions-hero > svg {
+  width: 100%;
+  height: auto;
+  grid-column: 1;
+  grid-row: 1;
 }
 .hour-details .minute-local-clock {
   display: inline-flex;
@@ -20,16 +36,16 @@
   text-shadow: 0 1px 6px rgb(10 10 23 / 72%);
 }
 .minute-calendar {
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.3;
 }
 .minute-clock-face {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 5px;
 }
 .minute-digits {
-  font-size: clamp(42px, 11cqi, 64px);
+  font-size: clamp(22px, 5.8cqi, 32px);
   font-weight: 580;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.065em;
@@ -44,23 +60,18 @@
   flex-direction: column;
   gap: 2px;
   font:
-    13px/1.15 "IBM Plex Mono",
+    10px/1.15 "IBM Plex Mono",
     monospace;
 }
 .minute-clock-suffix span:first-child {
-  font-size: 17px;
-}
-.hour-details .minute-condition-line {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  margin: 8px 0 12px;
-  min-height: 48px;
+  font-size: 12px;
 }
 .conditions-hero strong.display {
+  grid-column: 2 / -1;
+  grid-row: 1;
+  line-height: 1;
   color: var(--mauve);
-  font-size: clamp(54px, 15cqi, 84px);
+  font-size: clamp(42px, 11.5cqi, 62px);
   letter-spacing: -0.055em;
   white-space: nowrap;
   text-shadow: 0 1px 5px rgb(10 10 23 / 72%);
@@ -70,29 +81,34 @@
   color: var(--text);
   font: 500 18px var(--font-body);
 }
-.minute-condition-line .minute-description {
+.conditions-hero .minute-description {
   color: #fff;
-  font-size: 16px;
+  grid-column: 2 / -1;
+  grid-row: 2;
+  align-self: start;
+  font-size: clamp(20px, 4.8cqi, 26px);
   font-weight: 600;
   line-height: 1.2;
   text-shadow: 0 1px 5px rgb(10 10 23 / 72%);
 }
-.minute-condition-line .hour-step {
+.conditions-hero .hour-step {
   color: var(--text);
   background-color: color-mix(in srgb, var(--mantle) 72%, transparent);
 }
-@media (max-width: 420px) {
-  .hour-details .minute-condition-line {
-    gap: 7px;
-  }
-  .minute-condition-line .minute-description {
-    font-size: 14px;
-  }
-  .minute-condition-line .minute-arrows {
+.conditions-hero:has(.minute-arrows) .minute-description {
+  grid-column: 2;
+}
+.conditions-hero .minute-arrows {
+  grid-column: 3;
+  grid-row: 2;
+  align-self: start;
+}
+@container (max-width: 360px) {
+  .conditions-hero .minute-arrows {
     gap: 3px;
   }
-  .minute-condition-line .hour-step {
+  .conditions-hero .hour-step {
     width: 32px;
-    height: 36px;
+    height: 32px;
   }
 }

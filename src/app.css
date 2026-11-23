@@ -92,6 +92,55 @@ body,
 .control svg {
   flex-shrink: 0;
 }
+.mobile-forecast-sheet {
+  transform: translateY(var(--sheet-offset, 0px));
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mobile-forecast-sheet:not([data-dragging]) {
+    transition: transform 150ms ease-out;
+  }
+}
+.forecast-sheet-handle {
+  min-height: 32px;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+}
+.forecast-sheet-handle:active {
+  cursor: grabbing;
+}
+.forecast-sheet-handle span {
+  width: 33px;
+  height: 4px;
+  border-radius: 3px;
+  background: var(--surface1);
+}
+.forecast-bubble {
+  position: absolute;
+  bottom: max(8px, env(safe-area-inset-bottom));
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: min(380px, calc(100% - 32px));
+  min-height: 44px;
+  padding: 3px 14px;
+  gap: 4px;
+  border: 1px solid var(--surface1);
+  border-radius: 999px;
+  background: var(--base);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 35%);
+  font-size: 21px;
+  font-variant-numeric: tabular-nums;
+}
+.bubble-place {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 650;
+}
+.forecast-bubble strong {
+  color: var(--mauve);
+}
 .text {
   overflow-wrap: break-word;
   min-width: 0;
@@ -148,10 +197,10 @@ body,
 }
 .hour-details dl {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
-  gap: 8px 12px;
+  grid-template-columns: repeat(3, minmax(0, 132px));
+  gap: 5px 10px;
   margin: 0;
-  padding-top: 10px;
+  padding-top: 7px;
   border-top: 1px solid var(--surface1);
 }
 .hour-details dt {
@@ -159,9 +208,15 @@ body,
   font-size: 13px;
 }
 .hour-details dd {
-  margin: 2px 0 0;
+  margin: 0;
   font-weight: 650;
-  font-size: 20px;
+  font-size: 18px;
+  line-height: 1.15;
+}
+@container (max-width: 365px) {
+  .hour-details dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 [role="slider"]:focus-visible {
   outline: 2px solid var(--lavender);

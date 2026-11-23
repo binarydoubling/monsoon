@@ -14,12 +14,16 @@ test("a US point gets current, daily and hourly forecasts in one Open-Meteo requ
       ...snapshot.current,
       time: now + 900,
       temperature_2m: 12.5,
+      apparent_temperature: 9,
+      precipitation: 0.5,
+      interval: 900,
       cloud_cover: 0,
     },
     hourly: {
       ...snapshot.hourly,
       time: [now],
       temperature_2m: [9.5],
+      precipitation: [0.5],
       cloud_cover: [65],
     },
     // The provider keeps its request-time offset after clocks fall back.
@@ -48,6 +52,9 @@ test("a US point gets current, daily and hourly forecasts in one Open-Meteo requ
   assert.equal(value.source, "Open-Meteo");
   assert.equal(value.current?.t, now + 900);
   assert.equal(value.current?.c, 12.5);
+  assert.equal(value.current?.feelsLikeC, 9);
+  assert.equal(value.current?.precipMmPerHour, 2);
+  assert.equal(value.hours[0].precipMmPerHour, 0.5);
   assert.equal(value.hours[0].c, 9.5);
   assert.equal(value.current?.cloudCover, 0);
   assert.equal(value.hours[0].cloudCover, 65);

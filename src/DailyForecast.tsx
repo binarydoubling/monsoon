@@ -54,8 +54,6 @@ function CurrentConditions({
   return (
     <div className="current-weather">
       <WeatherBackground t={now} point={point} hour={hour} />
-      <LocationHeading point={point} />
-      <h2 className="display">{label}</h2>
       <Conditions
         hour={hour}
         t={now}
@@ -63,6 +61,7 @@ function CurrentConditions({
         zone={zone}
         fahrenheit={fahrenheit}
         label={label}
+        heading={<h2 className="display">{label}</h2>}
         showSeconds
       />
     </div>

@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
+import WeatherArt from "./src/WeatherArt";
+import ForecastSheetHandle from "./src/ForecastSheetHandle";
 import Atlas from "./src/Atlas";
 import Outlook from "./src/Outlook";
 import LocationHeading from "./src/LocationHeading";
@@ -57,7 +59,50 @@ export default function App() {
   const { width, height } = viewport;
   const small = width < 760;
   const dialog = useRef<HTMLDialogElement>(null);
+  const forecastPanel = useRef<HTMLDivElement>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const exitAnimation = useRef<Animation | null>(null);
+
+  const openForecast = () => {
+    exitAnimation.current?.cancel();
+    exitAnimation.current = null;
+    setSheetOpen(true);
+  };
+
+  const collapseForecast = useCallback(() => {
+    const panel = forecastPanel.current;
+    if (!panel || exitAnimation.current) return;
+
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setSheetOpen(false);
+      return;
+    }
+
+    const animation = panel.animate(
+      [
+        { transform: getComputedStyle(panel).transform },
+        { transform: "translateY(100%)" },
+      ],
+      {
+        duration: 240,
+        easing: "cubic-bezier(.4, 0, .8, .5)",
+        fill: "forwards",
+      },
+    );
+
+    exitAnimation.current = animation;
+
+    animation.onfinish = () => {
+      if (exitAnimation.current === animation) setSheetOpen(false);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      exitAnimation.current?.cancel();
+      exitAnimation.current = null;
+    };
+  }, [small, sheetOpen]);
 
   const [panelView, setPanelView] = useState<"overview" | "minutes">(
     "overview",
@@ -257,7 +302,7 @@ export default function App() {
   function choose(p: Place, center = true) {
     setPoint(p);
     setPanelView("overview");
-    setSheetOpen(true);
+    openForecast();
     if (center) setFocus((v) => v + 1);
     setModal("");
   }
@@ -413,7 +458,8 @@ export default function App() {
         </div>
         {(!small || sheetOpen) && (
           <div
-            className="stack"
+            ref={forecastPanel}
+            className={small ? "stack mobile-forecast-sheet" : "stack"}
             aria-label="Forecast panel"
             style={{
               ...box,
@@ -435,21 +481,10 @@ export default function App() {
             }}
           >
             {small && (
-              <Button
-                label="Collapse forecast"
-                style={{ paddingBlock: 7 }}
-                onClick={() => setSheetOpen(false)}
-              >
-                <div
-                  className="stack"
-                  style={{
-                    height: 4,
-                    width: 33,
-                    borderRadius: 3,
-                    backgroundColor: line,
-                  }}
-                />
-              </Button>
+              <ForecastSheetHandle
+                panel={forecastPanel}
+                collapse={collapseForecast}
+              />
             )}
             <nav className="forecast-views" aria-label="Forecast views">
               <button
@@ -546,27 +581,22 @@ export default function App() {
         {small && !sheetOpen && (
           <Button
             label="Open forecast"
-            onClick={() => setSheetOpen(true)}
-            style={{
-              ...box,
-              position: "absolute",
-              bottom: 8,
-              left: 12,
-              right: 12,
-              paddingBlock: 9,
-              gap: 9,
-            }}
+            className="control forecast-bubble"
+            aria-description={
+              current
+                ? `${point.name}, ${temp(current.c, unit)}°${unit ? "F" : "C"}, ${current.desc}`
+                : point.name
+            }
+            onClick={openForecast}
           >
-            <Icon name="map-pin" size={13} color={accent} />
-            <AtlasText size={16} face="bold">
-              {point.name}
-            </AtlasText>
+            <span className="bubble-place">{point.name}</span>
             {current && (
-              <AtlasText size={14}>
-                {temp(current.c, unit)}° · {current.desc}
-              </AtlasText>
+              <>
+                <WeatherArt desc={current.desc} day={current.day} size={36} />
+                <strong>{temp(current.c, unit)}°</strong>
+              </>
             )}
-            <Icon name="chevron-up" size={14} />
+            <Icon name="chevron-up" size={15} />
           </Button>
         )}
       </div>

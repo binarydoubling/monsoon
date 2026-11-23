@@ -12,6 +12,8 @@ function hour(
   return {
     t: start + offset * 3600,
     c: -2 + 6 * offset,
+    feelsLikeC: -6 + 4 * offset,
+    precipMmPerHour: 2 * offset,
     hum: 80 - 12 * offset,
     cloudCover: offset === 0 ? 0 : 100,
     rain: 36 + 12 * offset,
@@ -33,6 +35,8 @@ test("minute estimates interpolate each numeric reading and use the nearest sky 
     hour: {
       t,
       c: -0.5,
+      feelsLikeC: -5,
+      precipMmPerHour: 2,
       hum: 77,
       cloudCover: 25,
       rain: 39,

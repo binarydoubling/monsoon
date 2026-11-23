@@ -9,6 +9,7 @@
 .daily-layout section {
   min-width: 0;
 }
+.current-weather .hour-details > h2,
 .daily-layout > div > h2,
 .daily-week > h2 {
   margin: 0 0 8px;

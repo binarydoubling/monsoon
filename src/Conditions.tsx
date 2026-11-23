@@ -5,9 +5,10 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
-import { solarElevation, solarPosition } from "./sun";
+import LocationHeading from "./LocationHeading";
+import WeatherArt from "./WeatherArt";
 import { compass, temp, wind } from "./weather";
-import type { Coordinates, ForecastHour } from "./weather";
+import type { Place, ForecastHour } from "./weather";
 import "./minute-clock.css";
 
 const ForecastSky = lazy(() => import("./ForecastSky"));
@@ -27,15 +28,17 @@ export default function Conditions({
   point,
   zone,
   fahrenheit,
+  heading,
   children,
   showSeconds = false,
 }: {
   hour?: ForecastHour;
   t: number;
   label: string;
-  point: Coordinates;
+  point: Place;
   zone: string;
   fahrenheit: boolean;
+  heading?: ReactNode;
   children?: ReactNode;
   showSeconds?: boolean;
 }) {
@@ -61,17 +64,28 @@ export default function Conditions({
     formatter.formatToParts(instant).map(({ type, value }) => [type, value]),
   );
 
-  const elevation = solarElevation(
-    solarPosition(t * 1000),
-    point.lon,
-    point.lat,
-  );
-
   const speed = wind(hour?.kmh ?? null, fahrenheit);
 
+  const mmPerHour = hour?.precipMmPerHour;
+  const rate = mmPerHour == null ? null : mmPerHour / (fahrenheit ? 25.4 : 1);
+  const minRate = fahrenheit ? 0.01 : 0.1;
+
+  const formattedRate =
+    rate == null
+      ? "—"
+      : (rate > 0 && rate < minRate
+          ? "<" + minRate
+          : Number(rate.toFixed(fahrenheit ? 2 : 1))) +
+        (fahrenheit ? " in/h" : " mm/h");
+
   const readings = [
+    [
+      "Feels like",
+      hour?.feelsLikeC == null
+        ? "—"
+        : temp(hour.feelsLikeC, fahrenheit, 1) + (fahrenheit ? "°F" : "°C"),
+    ],
     ["Humidity", hour?.hum == null ? "—" : Math.round(hour.hum) + "%"],
-    ["Sun elevation", (elevation > 0 ? "+" : "") + elevation.toFixed(1) + "°"],
     ["Precip. chance", hour?.rain == null ? "—" : Math.round(hour.rain) + "%"],
     [
       "Wind",
@@ -85,15 +99,13 @@ export default function Conditions({
       "Pressure",
       hour?.pressure == null ? "—" : Math.round(hour.pressure) + " hPa",
     ],
+    ["Precip. rate", formattedRate],
   ];
 
   return (
     <section className="hour-details" aria-label={label}>
-      <div className="conditions-hero">
-        <strong className="display">
-          {hour ? temp(hour.c, fahrenheit, 1) + "°" : "—"}
-          {hour && <small>{fahrenheit ? "F" : "C"}</small>}
-        </strong>
+      <div className="conditions-header">
+        <LocationHeading point={point} />
         <time
           className="minute-local-clock"
           dateTime={instant.toISOString()}
@@ -117,7 +129,17 @@ export default function Conditions({
           </span>
         </time>
       </div>
-      <div className="minute-condition-line">
+      {heading}
+      <div className="conditions-hero">
+        <WeatherArt
+          desc={hour?.desc ?? "Conditions unavailable"}
+          day={hour?.day}
+          size={76}
+        />
+        <strong className="display">
+          {hour ? temp(hour.c, fahrenheit, 1) + "°" : "—"}
+          {hour && <small>{fahrenheit ? "F" : "C"}</small>}
+        </strong>
         <span className="minute-description">
           {hour?.desc ?? "Forecast unavailable"}
         </span>

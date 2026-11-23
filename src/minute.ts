@@ -41,6 +41,9 @@ export function forecastMinute(
     hour: {
       t,
       c: lerp(before.c, after.c),
+      feelsLikeC: blend(before.feelsLikeC, after.feelsLikeC),
+      // Open-Meteo timestamps precipitation at the end of its accumulation interval.
+      precipMmPerHour: after.precipMmPerHour ?? null,
       hum: blend(before.hum, after.hum),
       rain: blend(before.rain, after.rain),
       kmh: blend(before.kmh, after.kmh),

@@ -280,6 +280,12 @@ export default function Atlas(props: AtlasProps) {
       "bottom-right",
     );
 
+    // MapLibre initially expands even compact attribution when its first credits arrive.
+    const attribution = el.querySelector("details.maplibregl-ctrl-attrib");
+    attribution?.classList.add("maplibregl-compact");
+    attribution?.classList.remove("maplibregl-compact-show");
+    attribution?.removeAttribute("open");
+
     m.on("click", (e) => {
       const at = m.project(e.lngLat);
       if (Math.hypot(at.x - e.point.x, at.y - e.point.y) > 3) return;
