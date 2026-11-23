@@ -1,10 +1,10 @@
 import React, { useState, useCallback, useEffect, useRef } from "react";
-import WeatherArt from "./src/WeatherArt";
-import ForecastSheetHandle from "./src/ForecastSheetHandle";
-import Atlas from "./src/Atlas";
-import Outlook from "./src/Outlook";
-import LocationHeading from "./src/LocationHeading";
-import DailyForecast from "./src/DailyForecast";
+import WeatherArt from "../forecast/WeatherArt";
+import ForecastSheetHandle from "../forecast/panel/ForecastSheetHandle";
+import Atlas from "../atlas/Atlas";
+import MinuteExplorer from "../forecast/minutes/MinuteExplorer";
+import LocationHeading from "../forecast/LocationHeading";
+import DailyForecast from "../forecast/overview/DailyForecast";
 import {
   AtlasText,
   Button,
@@ -18,7 +18,7 @@ import {
   line,
   accent,
   paper,
-} from "./src/ui";
+} from "../shared/ui";
 import {
   home,
   places,
@@ -29,8 +29,8 @@ import {
   getJSON,
   coordinatePlace,
   reverseGeocode,
-} from "./src/weather";
-import type { Forecast, Place } from "./src/weather";
+} from "../forecast/weather";
+import type { Forecast, Place } from "../forecast/weather";
 
 interface SearchResponse {
   results?: {
@@ -513,7 +513,7 @@ export default function App() {
               </button>
             </nav>
             {showMinutes && (
-              <Outlook
+              <MinuteExplorer
                 key={key(point) + ":" + firstHour.t}
                 hours={data.hours}
                 start={firstHour.t}

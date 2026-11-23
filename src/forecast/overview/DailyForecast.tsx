@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import Conditions, { WeatherBackground } from "./Conditions";
-import LocationHeading from "./LocationHeading";
-import type { Place, Forecast, ForecastHour } from "./weather";
-import { temp } from "./weather";
-import WeatherArt from "./WeatherArt";
-import { describePeriod } from "./dayStory";
+import Conditions, { WeatherBackground } from "../Conditions";
+import LocationHeading from "../LocationHeading";
+import type { Place, Forecast, ForecastHour } from "../weather";
+import { temp } from "../weather";
+import WeatherArt from "../WeatherArt";
+import { describePeriod } from "../dayStory";
 import { forecastPeriods } from "./forecastPeriods";
 import "./daily.css";
 

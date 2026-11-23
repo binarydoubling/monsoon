@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { forecastMinute } from "../src/minute.ts";
-import type { ForecastHour } from "../src/weather.ts";
+import { forecastMinute } from "../src/forecast/minutes/minute.ts";
+import type { ForecastHour } from "../src/forecast/weather.ts";
 
 const start = Date.parse("2026-11-01T08:00:00Z") / 1000;
 

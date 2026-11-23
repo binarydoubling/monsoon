@@ -1,4 +1,4 @@
-import type { ForecastHour } from "./weather";
+import type { ForecastHour } from "../weather";
 
 export function forecastMinute(
   hours: readonly ForecastHour[],

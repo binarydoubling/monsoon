@@ -4,7 +4,7 @@ import type {
   StyleSpecification,
 } from "maplibre-gl";
 import { localPlaceZoom, placeLabels } from "./placeLabels";
-import { atmospherePosition, solarPosition } from "./sun";
+import { atmospherePosition, solarPosition } from "../shared/sun";
 
 const lat = (y: number) =>
   (Math.atan(Math.sinh(Math.PI * (1 - 2 * y))) * 180) / Math.PI;
@@ -273,14 +273,14 @@ export function atlasStyle(
       },
       relief: {
         type: "raster",
-        tiles: [new URL("../assets/maps/world.jpg", import.meta.url).href],
+        tiles: [new URL("../../assets/maps/world.jpg", import.meta.url).href],
         maxzoom: 0,
         tileSize: 512,
         attribution: "Natural Earth · Mapzen",
       },
       iceland: {
         type: "image",
-        url: new URL("../assets/maps/iceland.jpg", import.meta.url).href,
+        url: new URL("../../assets/maps/iceland.jpg", import.meta.url).href,
         coordinates: [
           [icelandWest, lat(0.234375)],
           [icelandEast, lat(0.234375)],

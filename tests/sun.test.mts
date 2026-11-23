@@ -4,7 +4,7 @@ import {
   daylightIntervals,
   solarElevation,
   solarPosition,
-} from "../src/sun.ts";
+} from "../src/shared/sun.ts";
 
 // USNO Celestial Navigation almanac: observer longitude/latitude, solar GHA,
 // declination and computed altitude in degrees. East longitude is positive.

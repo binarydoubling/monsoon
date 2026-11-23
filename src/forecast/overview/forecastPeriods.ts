@@ -1,4 +1,4 @@
-import type { Forecast, ForecastDay, ForecastHour } from "./weather";
+import type { Forecast, ForecastDay, ForecastHour } from "../weather";
 
 type PeriodName = "Day" | "Night" | "Overnight";
 

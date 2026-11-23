@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { forecastPeriods } from "../src/forecastPeriods.ts";
-import type { Forecast, ForecastHour } from "../src/weather.ts";
+import { forecastPeriods } from "../src/forecast/overview/forecastPeriods.ts";
+import type { Forecast, ForecastHour } from "../src/forecast/weather.ts";
 
 function series(start: string, length: number, zone: string): Forecast {
   const hours = Array.from({ length }, (_, i): ForecastHour => ({

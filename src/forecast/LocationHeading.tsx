@@ -1,5 +1,5 @@
 import { coords, type Place } from "./weather";
-import { Icon, accent } from "./ui";
+import { Icon, accent } from "../shared/ui";
 
 export default function LocationHeading({ point }: { point: Place }) {
   const coordinates = coords(point);

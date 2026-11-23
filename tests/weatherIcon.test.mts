@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { accessSync } from "node:fs";
 import test from "node:test";
-import { condition } from "../src/weather.ts";
-import { weatherIconName } from "../src/weatherIcon.ts";
+import { condition } from "../src/forecast/weather.ts";
+import { weatherIconName } from "../src/forecast/weatherIcon.ts";
 
 test("every forecast condition has bundled animated and reduced-motion Meteocons", () => {
   const unavailable = condition(null);

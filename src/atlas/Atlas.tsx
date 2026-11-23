@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import maplibregl, { type StyleSpecification } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./atlas.css";
-import type { Place } from "./weather";
+import type { Place } from "../forecast/weather";
 import {
   atlasStyle,
   borderLayers,
@@ -14,7 +14,7 @@ import {
   solarElevation,
   solarPosition,
   sunlightTile,
-} from "./sun";
+} from "../shared/sun";
 import { placeLabels } from "./placeLabels";
 import { Radar as RadarIcon } from "lucide-react";
 import Radar from "./Radar";

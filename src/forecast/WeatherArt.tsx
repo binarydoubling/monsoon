@@ -1,7 +1,7 @@
 import { useId, useMemo, useSyncExternalStore } from "react";
 import { weatherIconName } from "./weatherIcon";
 
-const artwork = import.meta.glob<string>("../assets/meteocons/*/*.svg", {
+const artwork = import.meta.glob<string>("../../assets/meteocons/*/*.svg", {
   eager: true,
   import: "default",
   query: "?raw",
@@ -34,7 +34,7 @@ export default function WeatherArt({
   const icon = weatherIconName(desc, day);
 
   const id = useId();
-  const svg = artwork[`../assets/meteocons/${variant}/${icon}.svg`];
+  const svg = artwork[`../../assets/meteocons/${variant}/${icon}.svg`];
 
   // Inline trusted, bundled artwork. Each instance needs its own gradient and clip IDs.
   const markup = useMemo(

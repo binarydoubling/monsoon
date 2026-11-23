@@ -1,6 +1,6 @@
 import type { Map } from "maplibre-gl";
-import catalog from "../assets/sky/hipparcos.csv?raw";
-import { radians, type Sun } from "./sun";
+import catalog from "../../assets/sky/hipparcos.csv?raw";
+import { radians, type Sun } from "../shared/sun";
 
 // Unit vectors in MapLibre's globe axes: east at 90° RA, north, then 0° RA.
 function direction(ra: number, dec: number) {

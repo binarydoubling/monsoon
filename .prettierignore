@@ -3,7 +3,7 @@ dist/
 release/
 package-lock.json
 # Bundled provider forecast snapshot
-src/reykjavik.json
+src/forecast/reykjavik.json
 
 # Bundled Natural Earth label points
 public/maps/place-labels.geojson

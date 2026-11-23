@@ -9,7 +9,7 @@ import {
   Vector3,
   WebGLRenderer,
 } from "three";
-import { radians, solarElevation, solarPosition } from "./sun";
+import { radians, solarElevation, solarPosition } from "../shared/sun";
 import type { Coordinates, ForecastHour } from "./weather";
 
 const vertexShader = `

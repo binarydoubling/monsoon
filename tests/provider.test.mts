@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import snapshot from "../src/reykjavik.json" with { type: "json" };
-import { condition, forecast } from "../src/weather.ts";
+import snapshot from "../src/forecast/reykjavik.json" with { type: "json" };
+import { condition, forecast } from "../src/forecast/weather.ts";
 
 test("a US point gets current, daily and hourly forecasts in one Open-Meteo request", async (t) => {
   const now = Math.floor(Date.now() / 3600000) * 3600;

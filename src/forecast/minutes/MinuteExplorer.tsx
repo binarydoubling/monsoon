@@ -1,12 +1,12 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent } from "react";
-import { daylightIntervals } from "./sun";
-import { describeDay } from "./dayStory";
-import Conditions, { WeatherBackground } from "./Conditions";
+import { daylightIntervals } from "../../shared/sun";
+import { describeDay } from "../dayStory";
+import Conditions, { WeatherBackground } from "../Conditions";
 import { forecastMinute } from "./minute";
-import { Button, Icon } from "./ui";
-import WeatherArt from "./WeatherArt";
-import type { ForecastHour, Place } from "./weather";
+import { Button, Icon } from "../../shared/ui";
+import WeatherArt from "../WeatherArt";
+import type { ForecastHour, Place } from "../weather";
 
 const pixelsPerMinute = 4;
 const metrics = ["Temperature", "Precipitation", "Wind"] as const;
@@ -23,7 +23,7 @@ function measurement(
   return hour.kmh == null ? null : hour.kmh / (fahrenheit ? 1.609344 : 1);
 }
 
-export default function Outlook({
+export default function MinuteExplorer({
   hours,
   start,
   initialMinute,

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Map as GlobeMap, RasterTileSource } from "maplibre-gl";
 import { Pause, Play, RotateCcw } from "lucide-react";
-import { getJSON } from "./weather";
+import { getJSON } from "../forecast/weather";
 
 const feed = "https://api.rainviewer.com/public/weather-maps.json";
 
