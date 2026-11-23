@@ -4,12 +4,13 @@ import ForecastPanel, {
   type ForecastPanelHandle,
 } from "../forecast/panel/ForecastPanel";
 import {
-  home,
+  defaultPlace,
   key,
   coordinatePlace,
   reverseGeocode,
   type Place,
 } from "../forecast/weather";
+import { readLastPlace, rememberPlace } from "../places/lastPlace";
 import { usePreferences } from "./usePreferences";
 import AppDialog, { type DialogView } from "./AppDialog";
 import Toolbar from "./Toolbar";
@@ -33,7 +34,7 @@ export default function App() {
   const panel = useRef<ForecastPanelHandle>(null);
   const panelWidth = Math.min(548, Math.round(width * 0.46));
 
-  const [point, setPoint] = useState(home);
+  const [point, setPoint] = useState(() => readLastPlace() ?? defaultPlace);
   const [focus, setFocus] = useState(0);
   const [modal, setModal] = useState<DialogView>("");
 
@@ -57,6 +58,7 @@ export default function App() {
 
         setPoint((current) => (current === point ? resolved : current));
 
+        rememberPlace(resolved, point);
         updateSavedLabel(resolved);
       })
       .catch(() => {
@@ -67,6 +69,7 @@ export default function App() {
   }, [point, updateSavedLabel]);
 
   function selectPlace(p: Place, center = true) {
+    rememberPlace(p);
     setPoint(p);
     panel.current?.openOverview();
     if (center) setFocus((v) => v + 1);
@@ -103,7 +106,7 @@ export default function App() {
         <Toolbar
           small={small}
           fahrenheit={fahrenheit}
-          onHome={() => selectPlace(home)}
+          onHome={() => selectPlace(point)}
           onSearch={() => setModal("search")}
           onSaved={() => setModal("saved")}
           onUnitChange={setFahrenheit}

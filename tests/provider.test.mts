@@ -1,17 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import snapshot from "../src/forecast/reykjavik.json" with { type: "json" };
 import { condition, forecast } from "../src/forecast/weather.ts";
 
 test("a US point gets current, daily and hourly forecasts in one Open-Meteo request", async (t) => {
   const now = Math.floor(Date.now() / 3600000) * 3600;
 
   const fixture = {
-    ...snapshot,
     timezone: "America/Los_Angeles",
     utc_offset_seconds: -7 * 3600,
     current: {
-      ...snapshot.current,
       time: now + 900,
       temperature_2m: 12.5,
       apparent_temperature: 9,
@@ -20,14 +17,19 @@ test("a US point gets current, daily and hourly forecasts in one Open-Meteo requ
       cloud_cover: 0,
     },
     hourly: {
-      ...snapshot.hourly,
       time: [now],
       temperature_2m: [9.5],
       precipitation: [0.5],
       cloud_cover: [65],
     },
     // The provider keeps its request-time offset after clocks fall back.
-    daily: { ...snapshot.daily, time: [Date.UTC(2026, 10, 2, 7) / 1000] },
+    daily: {
+      time: [Date.UTC(2026, 10, 2, 7) / 1000],
+      temperature_2m_max: [16],
+      temperature_2m_min: [7],
+      weather_code: [3],
+      precipitation_probability_max: [0],
+    },
   };
 
   const fetch = t.mock.method(globalThis, "fetch", async (url: string) => {
@@ -59,19 +61,22 @@ test("a US point gets current, daily and hourly forecasts in one Open-Meteo requ
   assert.equal(value.current?.cloudCover, 0);
   assert.equal(value.hours[0].cloudCover, 65);
   assert.equal(value.daily[0].date, "2026-11-02");
-  assert.equal(value.daily[0].high, snapshot.daily.temperature_2m_max[0]);
+  assert.equal(value.daily[0].high, 16);
 });
 
 test("missing current and daily values remain unavailable", async (t) => {
   const fixture = {
-    ...snapshot,
-    current: { ...snapshot.current, temperature_2m: null },
+    timezone: "UTC",
+    utc_offset_seconds: 0,
+    current: { time: 0, temperature_2m: null },
     daily: {
-      ...snapshot.daily,
+      temperature_2m_max: [null],
+      weather_code: [null],
+      precipitation_probability_max: [null],
       temperature_2m_min: [null],
-      time: snapshot.daily.time.slice(0, 1),
+      time: [0],
     },
-    hourly: { ...snapshot.hourly, time: [Math.floor(Date.now() / 1000)] },
+    hourly: { time: [Math.floor(Date.now() / 1000)], temperature_2m: [9] },
   };
 
   t.mock.method(globalThis, "fetch", async () => Response.json(fixture));

@@ -45,11 +45,6 @@ export default function Sources() {
           "https://www.usgs.gov/faqs/what-are-base-map-services-or-urls-used-national-map",
         ],
         [
-          "Iceland aerial imagery",
-          "Aerial photographs from Náttúrufræðistofnun, where survey coverage is available.",
-          "https://www.natt.is/en/resources/open-data/aerial-photos",
-        ],
-        [
           "Natural Earth",
           "Public-domain coastlines, country and subdivision abbreviation points, and city labels ranked by estimated metropolitan population.",
           "https://www.naturalearthdata.com/",

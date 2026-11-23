@@ -1,5 +1,3 @@
-import snapshot from "./reykjavik.json" with { type: "json" };
-
 export interface Coordinates {
   lat: number;
   lon: number;
@@ -78,7 +76,7 @@ type MeteoResponse = {
   hourly: { time: number[] } & WeatherValues<(number | null)[]>;
 };
 
-export const home: Place = {
+export const defaultPlace: Place = {
   name: "Reykjavík",
   region: "Capital Region, Iceland",
   lat: 64.1466,
@@ -86,7 +84,6 @@ export const home: Place = {
 };
 
 export const places: Place[] = [
-  home,
   {
     name: "Anchorage",
     region: "Alaska, United States",
@@ -297,7 +294,6 @@ function meteo(data: MeteoResponse): Forecast {
   };
 }
 
-export const seed = meteo(snapshot);
 const memo = new Map<string, { at: number; value: Forecast }>();
 
 export async function forecast(

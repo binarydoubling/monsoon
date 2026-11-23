@@ -6,12 +6,6 @@ import type {
 import { localPlaceZoom, placeLabels } from "./placeLabels";
 import { atmospherePosition, solarPosition } from "../shared/sun";
 
-const lat = (y: number) =>
-  (Math.atan(Math.sinh(Math.PI * (1 - 2 * y))) * 180) / Math.PI;
-
-const icelandWest = -30.9375,
-  icelandEast = -8.4375;
-
 const lines: number[][][] = [];
 
 for (let lng = -180; lng < 180; lng += 15)
@@ -30,7 +24,6 @@ const imageryMinZoom = {
   "sentinel-2": 0,
   "us-ortho": 10,
   "us-naip": 15,
-  "iceland-ortho": 10,
 };
 
 export const imageryLayers = Object.keys(imageryMinZoom);
@@ -134,14 +127,6 @@ export function atlasStyle(
       id: "relief",
       type: "raster",
       source: "relief",
-      layout: { visibility: "none" },
-      paint: { "raster-fade-duration": 0 },
-    },
-    {
-      id: "iceland-relief",
-      type: "raster",
-      source: "iceland",
-      minzoom: 4,
       layout: { visibility: "none" },
       paint: { "raster-fade-duration": 0 },
     },
@@ -259,34 +244,12 @@ export function atlasStyle(
         attribution:
           '<a href="https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer">USDA NAIP · USGS</a>',
       },
-      "iceland-ortho": {
-        type: "raster",
-        tiles: [
-          "https://gis.natt.is/mapcache/web-mercator/wms?SERVICE=WMS&REQUEST=GetMap&VERSION=1.1.1&LAYERS=grunnkort-loftmynd&STYLES=&SRS=EPSG:3857&BBOX={bbox-epsg-3857}&WIDTH=256&HEIGHT=256&FORMAT=image/png&TRANSPARENT=TRUE",
-        ],
-        bounds: [-24.1, 63.25, -13.18, 66.7],
-        tileSize: 256 / density,
-        minzoom: 12,
-        maxzoom: 19,
-        attribution:
-          '<a href="https://www.natt.is/en/resources/open-data/aerial-photos">Náttúrufræðistofnun · Iceland aerial imagery</a>',
-      },
       relief: {
         type: "raster",
         tiles: [new URL("../../assets/maps/world.jpg", import.meta.url).href],
         maxzoom: 0,
         tileSize: 512,
         attribution: "Natural Earth · Mapzen",
-      },
-      iceland: {
-        type: "image",
-        url: new URL("../../assets/maps/iceland.jpg", import.meta.url).href,
-        coordinates: [
-          [icelandWest, lat(0.234375)],
-          [icelandEast, lat(0.234375)],
-          [icelandEast, lat(0.28125)],
-          [icelandWest, lat(0.28125)],
-        ],
       },
       grid: {
         type: "geojson",

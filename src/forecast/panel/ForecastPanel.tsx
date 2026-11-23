@@ -7,7 +7,7 @@ import {
   type Ref,
 } from "react";
 import { AtlasText, Button, Icon, box, paper, sub } from "../../shared/ui";
-import { key, seed, temp, type Place } from "../weather";
+import { key, temp, type Place } from "../weather";
 import MinuteExplorer from "../minutes/MinuteExplorer";
 import DailyForecast from "../overview/DailyForecast";
 import WeatherArt from "../WeatherArt";
@@ -175,7 +175,7 @@ export default function ForecastPanel({
               zone={data.zone}
               f={fahrenheit}
               point={point}
-              saved={data === seed || state === "offline"}
+              saved={state === "offline"}
             />
           )}
           <div
@@ -209,7 +209,7 @@ export default function ForecastPanel({
                 point={point}
                 forecast={data}
                 fahrenheit={fahrenheit}
-                saved={data === seed || state === "offline"}
+                saved={state === "offline"}
               />
             )}
             {state === "offline" && (

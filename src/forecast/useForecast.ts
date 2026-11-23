@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { forecast, home, key, seed, type Forecast } from "./weather";
+import { forecast, key, type Forecast } from "./weather";
 
 export function useForecast(lat: number, lon: number) {
   const forecastPoint = useRef(key({ lat, lon }));
 
-  const [data, setForecast] = useState<Forecast | null>(() =>
-    forecastPoint.current === key(home) ? seed : null,
-  );
+  const [data, setForecast] = useState<Forecast | null>(null);
 
   const [state, setStatus] = useState<"loading" | "live" | "offline">(
     "loading",
@@ -22,7 +20,7 @@ export function useForecast(lat: number, lon: number) {
 
     if (forecastPoint.current !== key(location)) {
       forecastPoint.current = key(location);
-      setForecast(key(location) === key(home) ? seed : null);
+      setForecast(null);
     }
 
     forecast(location, ctrl.signal)

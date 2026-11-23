@@ -31,8 +31,6 @@ export interface AtlasProps {
   onPick: (lat: number, lon: number, name?: string) => void;
 }
 
-const initial: [number, number] = [-25, 40];
-
 function updateNightExposure(map: maplibregl.Map) {
   if (!map.getLayer("sunlight")) return;
   const canvas = map.getCanvas();
@@ -91,7 +89,9 @@ export default function Atlas(props: AtlasProps) {
       labels: true,
     }),
     providerLayers = useRef<StyleSpecification["layers"]>([]),
-    [position, setPosition] = useState(formatPosition(initial[1], initial[0]));
+    [position, setPosition] = useState(() =>
+      formatPosition(props.point.lat, props.point.lon),
+    );
 
   const [sunReadout, setSunReadout] = useState("");
   latest.current = props;
@@ -102,13 +102,11 @@ export default function Atlas(props: AtlasProps) {
     const prefs = layerPrefs.current;
     updateNightExposure(m);
 
-    for (const id of ["relief", "iceland-relief"]) {
-      m.setLayoutProperty(
-        id,
-        "visibility",
-        prefs.satellite ? "none" : "visible",
-      );
-    }
+    m.setLayoutProperty(
+      "relief",
+      "visibility",
+      prefs.satellite ? "none" : "visible",
+    );
 
     for (const id of imageryLayers) {
       if (m.getLayer(id))
@@ -177,7 +175,7 @@ export default function Atlas(props: AtlasProps) {
       m = new maplibregl.Map({
         container: el,
         style: atlasStyle(window.devicePixelRatio),
-        center: initial,
+        center: [latest.current.point.lon, latest.current.point.lat],
         zoom: Math.log2(extent / 240),
         minZoom: -1,
         maxZoom: 19,
