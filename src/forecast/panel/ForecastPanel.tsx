@@ -7,11 +7,12 @@ import {
   type Ref,
 } from "react";
 import { AtlasText, Button, Icon, box, paper, sub } from "../../shared/ui";
-import { key, seed, temp, type Forecast, type Place } from "../weather";
+import { key, seed, temp, type Place } from "../weather";
 import MinuteExplorer from "../minutes/MinuteExplorer";
 import DailyForecast from "../overview/DailyForecast";
 import WeatherArt from "../WeatherArt";
 import LocationHeading from "../LocationHeading";
+import { useForecast } from "../useForecast";
 import ForecastSheetHandle from "./ForecastSheetHandle";
 
 export interface ForecastPanelHandle {
@@ -24,11 +25,8 @@ export default function ForecastPanel({
   height,
   panelWidth,
   point,
-  unit,
+  fahrenheit,
   selected,
-  data,
-  state,
-  onRetry,
   onToggleSaved,
   onSources,
 }: {
@@ -37,14 +35,12 @@ export default function ForecastPanel({
   height: number;
   panelWidth: number;
   point: Place;
-  unit: boolean;
+  fahrenheit: boolean;
   selected: boolean;
-  data: Forecast | null;
-  state: "loading" | "live" | "offline";
-  onRetry: () => void;
   onToggleSaved: () => void;
   onSources: () => void;
 }) {
+  const { data, state, retry } = useForecast(point.lat, point.lon);
   const forecastPanel = useRef<HTMLDivElement>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const exitAnimation = useRef<Animation | null>(null);
@@ -177,7 +173,7 @@ export default function ForecastPanel({
                 Math.min(59, Math.floor((referenceTime - firstHour.t) / 60)),
               )}
               zone={data.zone}
-              f={unit}
+              f={fahrenheit}
               point={point}
               saved={data === seed || state === "offline"}
             />
@@ -212,12 +208,12 @@ export default function ForecastPanel({
               <DailyForecast
                 point={point}
                 forecast={data}
-                fahrenheit={unit}
+                fahrenheit={fahrenheit}
                 saved={data === seed || state === "offline"}
               />
             )}
             {state === "offline" && (
-              <Button onClick={onRetry}>Retry forecast</Button>
+              <Button onClick={retry}>Retry forecast</Button>
             )}
             <Button onClick={onSources} style={{ paddingBlock: 8 }}>
               <Icon name="info" size={12} />
@@ -234,7 +230,7 @@ export default function ForecastPanel({
           className="control forecast-bubble"
           aria-description={
             current
-              ? `${point.name}, ${temp(current.c, unit)}°${unit ? "F" : "C"}, ${current.desc}`
+              ? `${point.name}, ${temp(current.c, fahrenheit)}°${fahrenheit ? "F" : "C"}, ${current.desc}`
               : point.name
           }
           onClick={openForecast}
@@ -243,7 +239,7 @@ export default function ForecastPanel({
           {current && (
             <>
               <WeatherArt desc={current.desc} day={current.day} size={36} />
-              <strong>{temp(current.c, unit)}°</strong>
+              <strong>{temp(current.c, fahrenheit)}°</strong>
             </>
           )}
           <Icon name="chevron-up" size={15} />

@@ -5,14 +5,12 @@ import ForecastPanel, {
 } from "../forecast/panel/ForecastPanel";
 import {
   home,
-  seed,
   key,
-  forecast,
   coordinatePlace,
   reverseGeocode,
-  type Forecast,
   type Place,
 } from "../forecast/weather";
+import { usePreferences } from "./usePreferences";
 import AppDialog, { type DialogView } from "./AppDialog";
 import Toolbar from "./Toolbar";
 
@@ -35,72 +33,12 @@ export default function App() {
   const panel = useRef<ForecastPanelHandle>(null);
   const panelWidth = Math.min(548, Math.round(width * 0.46));
 
-  const [point, setPoint] = useState(home),
-    [data, setForecast] = useState<Forecast | null>(seed),
-    [state, setStatus] = useState<"loading" | "live" | "offline">("loading"),
-    [unit, setFahrenheit] = useState(false),
-    [saved, setSaved] = useState<Place[]>([]),
-    [focus, setFocus] = useState(0),
-    [retry, setRetry] = useState(0),
-    [modal, setModal] = useState<DialogView>(""),
-    [storageReady, setStorageReady] = useState(false);
+  const [point, setPoint] = useState(home);
+  const [focus, setFocus] = useState(0);
+  const [modal, setModal] = useState<DialogView>("");
 
-  useEffect(() => {
-    try {
-      const savedPoints = localStorage.getItem("monsoon:saved");
-
-      if (savedPoints)
-        setSaved(
-          (JSON.parse(savedPoints) as Place[]).map((p) =>
-            p.name === "Dropped pin" ? coordinatePlace(p) : p,
-          ),
-        );
-
-      setFahrenheit(localStorage.getItem("monsoon:unit") === "F");
-    } catch {
-      /* Storage can be unavailable in private browser sessions. */
-    }
-
-    setStorageReady(true);
-  }, []);
-
-  useEffect(() => {
-    if (!storageReady) return;
-
-    try {
-      localStorage.setItem("monsoon:saved", JSON.stringify(saved));
-      localStorage.setItem("monsoon:unit", unit ? "F" : "C");
-    } catch {
-      /* Preferences still work for this session. */
-    }
-  }, [saved, unit, storageReady]);
-
-  const { lat, lon } = point;
-  const forecastPoint = useRef(key(home));
-
-  useEffect(() => {
-    const ctrl = new AbortController();
-    const location = { lat, lon };
-    setStatus("loading");
-
-    if (forecastPoint.current !== key(location)) {
-      forecastPoint.current = key(location);
-      setForecast(key(location) === key(home) ? seed : null);
-    }
-
-    forecast(location, ctrl.signal)
-      .then((v) => {
-        if (!ctrl.signal.aborted) {
-          setForecast(v);
-          setStatus("live");
-        }
-      })
-      .catch(() => {
-        if (!ctrl.signal.aborted) setStatus("offline");
-      });
-
-    return () => ctrl.abort();
-  }, [lat, lon, retry]);
+  const { fahrenheit, setFahrenheit, saved, toggleSaved, updateSavedLabel } =
+    usePreferences();
 
   useEffect(() => {
     if (!point.resolveName && point.region !== "Selected coordinates") return;
@@ -119,29 +57,14 @@ export default function App() {
 
         setPoint((current) => (current === point ? resolved : current));
 
-        setSaved((items) =>
-          items.map((p) =>
-            (p.resolveName || p.region === "Selected coordinates") &&
-            key(p) === key(point)
-              ? { ...resolved, lat: p.lat, lon: p.lon }
-              : p,
-          ),
-        );
+        updateSavedLabel(resolved);
       })
       .catch(() => {
         // Coordinates still identify this forecast when the lookup is unavailable.
       });
 
     return () => ctrl.abort();
-  }, [point]);
-
-  const selected = saved.some((p) => key(p) === key(point)),
-    toggle = () =>
-      setSaved((s) =>
-        s.some((p) => key(p) === key(point))
-          ? s.filter((p) => key(p) !== key(point))
-          : [point, ...s],
-      );
+  }, [point, updateSavedLabel]);
 
   function selectPlace(p: Place, center = true) {
     setPoint(p);
@@ -149,11 +72,6 @@ export default function App() {
     if (center) setFocus((v) => v + 1);
     setModal("");
   }
-
-  useEffect(() => {
-    const timer = setInterval(() => setRetry((n) => n + 1), 30 * 60 * 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   return (
     <main className="stack app">
@@ -184,7 +102,7 @@ export default function App() {
         </div>
         <Toolbar
           small={small}
-          fahrenheit={unit}
+          fahrenheit={fahrenheit}
           onHome={() => selectPlace(home)}
           onSearch={() => setModal("search")}
           onSaved={() => setModal("saved")}
@@ -196,12 +114,9 @@ export default function App() {
           height={height}
           panelWidth={panelWidth}
           point={point}
-          unit={unit}
-          selected={selected}
-          data={data}
-          state={state}
-          onToggleSaved={toggle}
-          onRetry={() => setRetry((v) => v + 1)}
+          fahrenheit={fahrenheit}
+          selected={saved.some((item) => key(item) === key(point))}
+          onToggleSaved={() => toggleSaved(point)}
           onSources={() => setModal("sources")}
         />
       </div>
