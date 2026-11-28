@@ -202,37 +202,140 @@
 .radar-panel {
   position: absolute;
   left: 22px;
-  bottom: 105px;
-  width: min(264px, calc(100% - 32px));
+  bottom: 122px;
+  width: min(280px, calc(100% - 32px));
   box-sizing: border-box;
   display: grid;
-  gap: 7px;
-  padding: 10px 12px;
+  gap: 10px;
+  padding: 11px 12px 10px;
   color: var(--text);
-  background: var(--mantle);
+  background: color-mix(in srgb, var(--mantle) 88%, transparent);
+  backdrop-filter: blur(10px);
   border: 1px solid var(--surface1);
-  border-radius: 6px;
-  font: 13px var(--font-body);
-}
-.radar-title,
-.radar-playback,
-.radar-status {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.radar-title time {
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--crust) 60%, transparent);
 }
 .radar-panel small {
   color: var(--subtext0);
   font-size: 11px;
 }
-.radar-playback input {
+.radar-head,
+.radar-playback,
+.radar-status,
+.radar-key,
+.radar-key span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.radar-head strong {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.radar-head time {
+  margin-left: auto;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.radar-age {
+  min-width: 52px;
+  padding: 1px 6px;
+  text-align: center;
+  border: 1px solid var(--surface1);
+  border-radius: 999px;
+}
+.radar-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--surface1);
+}
+.radar-dot.live {
+  background: var(--green);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 22%, transparent);
+  animation: radar-pulse 2s ease-in-out infinite;
+}
+.radar-dot.stale {
+  background: var(--yellow);
+}
+.radar-dot.down {
+  background: var(--peach);
+}
+@keyframes radar-pulse {
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--green) 0%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .radar-dot.live {
+    animation: none;
+  }
+}
+.radar-playback {
+  align-items: flex-start;
+}
+.radar-track {
+  position: relative;
   flex: 1;
   min-width: 0;
-  accent-color: var(--mauve);
+  padding-top: 2px;
+}
+.radar-ticks {
+  position: absolute;
+  inset: 2px 6px auto;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.radar-ticks i {
+  width: 2px;
+  height: 10px;
+  border-radius: 1px;
+  background: var(--surface1);
+}
+.radar-ticks i.on {
+  height: 14px;
+  background: var(--mauve);
+}
+.radar-track input {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 22px;
+  margin: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.radar-track input::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 22px;
+  border-radius: 3px;
+  background: var(--text);
+  box-shadow: 0 0 0 2px var(--mantle);
+}
+.radar-track input::-moz-range-thumb {
+  width: 12px;
+  height: 22px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--text);
+}
+.radar-track input:focus-visible {
+  outline: 2px solid var(--mauve);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.radar-ends {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3px;
+  color: var(--subtext0);
+  font-size: 10px;
 }
 .radar-panel button {
   cursor: pointer;
@@ -243,8 +346,12 @@
   min-height: 26px;
   border: 1px solid var(--surface1);
   background: var(--base);
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--text);
+}
+.radar-panel button:disabled {
+  cursor: default;
+  opacity: 0.4;
 }
 @media (max-width: 759px) {
   .radar-panel {
@@ -258,14 +365,18 @@
 }
 
 .radar-key {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  padding-top: 8px;
+  border-top: 1px solid var(--surface0);
+}
+.radar-key span {
+  gap: 5px;
+  white-space: nowrap;
 }
 .radar-key i {
-  flex: 1;
-  height: 4px;
-  border-radius: 2px;
+  width: 48px;
+  height: 6px;
+  border-radius: 3px;
   background: linear-gradient(
     90deg,
     #88ddee,
@@ -277,7 +388,17 @@
     #c10000
   );
 }
-.radar-title a {
+.radar-key b {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--crust) 0 2px,
+    var(--surface0) 2px 4px
+  );
+}
+.radar-key a {
   color: var(--lavender);
-  font-size: 11px;
+  font-size: 10px;
 }

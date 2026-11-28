@@ -26,74 +26,147 @@
 .current-weather h2 {
   text-shadow: 0 1px 5px var(--crust);
 }
-.daily-date {
-  border-top: 1px solid var(--surface0);
-}
-.daily-date > summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-block: 12px;
+.tombstones {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 92px;
+  gap: 6px;
+  margin: 4px -16px 0;
+  padding: 2px 16px 10px;
   list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface1) transparent;
+}
+.tombstones li {
+  display: flex;
+  scroll-snap-align: start;
+}
+.tombstone {
+  flex: 1;
+  display: grid;
+  grid-template-rows: 2.5em 60px auto 1fr;
+  justify-items: center;
+  align-items: start;
+  gap: 4px;
+  padding: 10px 6px 12px;
+  color: var(--text);
+  font: inherit;
+  text-align: center;
   cursor: pointer;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--blue) 10%, var(--base)),
+    var(--base)
+  );
+  border: 1px solid var(--surface0);
+  border-radius: 10px;
 }
-.daily-date > summary::-webkit-details-marker {
-  display: none;
+.tombstone.night {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--mauve) 8%, var(--crust)),
+    var(--mantle)
+  );
 }
-.daily-date > summary::after {
-  content: "";
+.tombstone:hover,
+.tombstone[aria-current] {
+  border-color: var(--mauve);
+}
+.tombstone:focus-visible {
+  outline: 2px solid var(--mauve);
+  outline-offset: 2px;
+}
+.tombstone-name {
   align-self: center;
-  border: solid var(--subtext0);
-  border-width: 0 1.5px 1.5px 0;
-  width: 6px;
-  height: 6px;
-  margin-inline: 3px;
-  transform: rotate(-45deg);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.25;
 }
-.daily-date[open] > summary::after {
-  transform: rotate(45deg);
+.tombstone-art {
+  position: relative;
 }
-.daily-symbol,
-.daily-symbol svg {
+.tombstone-art > svg {
   display: block;
-  flex-shrink: 0;
 }
-.daily-date time {
-  font-weight: 680;
+.tombstone-pop {
+  position: absolute;
+  right: -8px;
+  bottom: -2px;
+  padding: 0 5px;
+  color: var(--crust);
+  background: var(--blue);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 15px;
 }
-.daily-extremes {
-  display: inline-flex;
-  margin-left: auto;
-  gap: 8px;
-  white-space: nowrap;
-  font-size: 13px;
-  color: var(--lavender);
+.tombstone-desc {
+  color: var(--subtext0);
+  font-size: 11px;
+  line-height: 1.3;
 }
-.daily-high {
+.tombstone-high,
+.tombstone-low {
+  align-self: end;
+  font-size: 11px;
+  color: var(--subtext0);
+}
+.tombstone strong {
+  font-size: 17px;
+  font-weight: 700;
+}
+.tombstone-high strong {
   color: var(--peach);
 }
-.daily-period {
+.tombstone-low strong {
+  color: var(--blue);
+}
+.period-details {
+  margin: 6px 0 0;
+}
+.period-details > div {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 9px;
-  padding-block: 0 15px;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 4px 12px;
+  margin-inline: -8px;
+  padding: 10px 8px;
+  border-top: 1px solid var(--surface0);
+  border-radius: 6px;
+  scroll-margin-block: 12px;
+  transition: background-color 0.3s;
 }
-.daily-period h3 {
-  margin: 0;
-  color: var(--text);
-  font-size: 16px;
+.period-details > div.selected {
+  background: color-mix(in srgb, var(--mauve) 12%, transparent);
 }
-.daily-period h3 span {
-  margin-left: 4px;
-  white-space: nowrap;
+.period-details dt {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  font-size: 13px;
+  font-weight: 650;
+}
+.period-details dt svg {
+  flex-shrink: 0;
+  margin-top: -6px;
+}
+.period-details dt small {
+  display: block;
   color: var(--subtext0);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
 }
-.daily-period p {
-  margin: 4px 0 0;
-  font-size: 15px;
+.period-details dd {
+  margin: 0;
+  font-size: 14px;
   line-height: 1.45;
+}
+@container (max-width: 380px) {
+  .period-details > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .daily-unavailable {
   margin: 0;

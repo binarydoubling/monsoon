@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { forecastPeriods } from "../src/forecast/overview/forecastPeriods.ts";
+import {
+  forecastPeriods,
+  periodLabel,
+} from "../src/forecast/overview/forecastPeriods.ts";
 import type { Forecast, ForecastHour } from "../src/forecast/weather.ts";
 
 function series(start: string, length: number, zone: string): Forecast {
@@ -73,4 +76,12 @@ test("a daily aggregate with no hourly coverage keeps the date without inventing
     { name: "Day", hours: [] },
     { name: "Night", hours: [] },
   ]);
+});
+
+test("periods are labelled the way NWS names them", () => {
+  assert.equal(periodLabel("2026-11-27", "Overnight", true), "Overnight");
+  assert.equal(periodLabel("2026-11-27", "Day", true), "Today");
+  assert.equal(periodLabel("2026-11-27", "Night", true), "Tonight");
+  assert.equal(periodLabel("2026-11-28", "Day", false), "Saturday");
+  assert.equal(periodLabel("2026-11-28", "Night", false), "Saturday Night");
 });

@@ -13,6 +13,19 @@ interface OutlookDate {
   periods: ForecastPeriod[];
 }
 
+const weekday = new Intl.DateTimeFormat("en-US", {
+  weekday: "long",
+  timeZone: "UTC",
+});
+
+// NWS-style period labels: Overnight, Today, Tonight, Saturday, Saturday Night.
+export function periodLabel(date: string, name: PeriodName, today: boolean) {
+  if (name === "Overnight") return name;
+  if (today) return name === "Day" ? "Today" : "Tonight";
+  const day = weekday.format(new Date(date + "T12:00Z"));
+  return name === "Day" ? day : day + " Night";
+}
+
 export function forecastPeriods(
   forecast: Forecast,
   reference = forecast.current?.t ?? forecast.hours[0]?.t,

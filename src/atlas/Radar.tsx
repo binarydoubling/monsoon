@@ -23,7 +23,6 @@ interface RadarFeed {
 }
 
 const timeFormat = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
   hour: "2-digit",
   minute: "2-digit",
   timeZone: "UTC",
@@ -208,24 +207,42 @@ export default function Radar({ map }: { map: GlobeMap }) {
 
   const date = frame ? new Date(frame.time * 1000) : null;
 
+  const minutesAgo = frame
+    ? Math.round((Date.now() / 1000 - frame.time) / 60)
+    : 0;
+
+  const latest = selected === null && !playing;
+  const stale = latest && minutesAgo > 30;
+
+  const span =
+    frames.length > 1
+      ? Math.round((frames[last].time - frames[0].time) / 3600)
+      : 0;
+
   return (
     <section className="radar-panel" aria-label="Precipitation radar">
-      <div className="radar-title">
+      <header className="radar-head">
+        <span
+          className={`radar-dot${feedError || tileError ? " down" : stale ? " stale" : latest ? " live" : ""}`}
+          aria-hidden="true"
+        />
         <strong>Radar</strong>
-        <a href="https://www.rainviewer.com/" target="_blank" rel="noreferrer">
-          RainViewer
-        </a>
         {date && (
-          <time dateTime={date.toISOString()} title={date.toUTCString()}>
-            {timeFormat.format(date)} UTC
+          <time
+            className="mono"
+            dateTime={date.toISOString()}
+            title={date.toUTCString()}
+          >
+            {timeFormat.format(date)}
+            <small> UTC</small>
           </time>
         )}
-        {frame && !playing && selected === null && (
-          <small>
-            {Date.now() / 1000 - frame.time > 1800 ? "Delayed" : "Latest"}
+        {frame && (
+          <small className="radar-age mono">
+            {latest && !stale ? "LIVE" : `−${minutesAgo} min`}
           </small>
         )}
-      </div>
+      </header>
       {frame && frames.length > 1 && (
         <div className="radar-playback">
           <button
@@ -237,33 +254,44 @@ export default function Radar({ map }: { map: GlobeMap }) {
               play(!playing);
             }}
           >
-            {playing ? <Pause size={14} /> : <Play size={14} />}
+            {playing ? <Pause size={13} /> : <Play size={13} />}
           </button>
-          <input
-            type="range"
-            aria-label="Radar frame"
-            aria-valuetext={date?.toUTCString()}
-            disabled={Boolean(tileError)}
-            min={0}
-            max={last}
-            value={index}
-            onChange={(e) => {
-              const n = Number(e.target.value);
-              play(false);
-              select(n === last ? null : frames[n].time);
-            }}
-          />
+          <div className="radar-track">
+            <div className="radar-ticks" aria-hidden="true">
+              {frames.map((f, i) => (
+                <i key={f.time} className={i <= index ? "on" : undefined} />
+              ))}
+            </div>
+            <input
+              type="range"
+              aria-label="Radar frame"
+              aria-valuetext={date?.toUTCString()}
+              disabled={Boolean(tileError)}
+              min={0}
+              max={last}
+              value={index}
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                play(false);
+                select(n === last ? null : frames[n].time);
+              }}
+            />
+            <div className="radar-ends mono" aria-hidden="true">
+              <span>−{span}h</span>
+              <span>now</span>
+            </div>
+          </div>
           <button
             type="button"
             aria-label="Show latest radar"
             title="Show latest radar"
-            disabled={Boolean(tileError)}
+            disabled={Boolean(tileError) || latest}
             onClick={() => {
               play(false);
               select(null);
             }}
           >
-            <RotateCcw size={14} />
+            <RotateCcw size={13} />
           </button>
         </div>
       )}
@@ -279,17 +307,24 @@ export default function Radar({ map }: { map: GlobeMap }) {
         <small role="status">Loading radar…</small>
       ) : null}
       {frame && (
-        <>
-          <div
-            className="radar-key"
-            aria-label="Radar reflectivity, light to heavy"
-          >
-            <small>Light</small>
+        <footer className="radar-key">
+          <span aria-label="Radar reflectivity, light to heavy">
+            <small>light</small>
             <i aria-hidden="true" />
-            <small>Heavy</small>
-          </div>
-          <small>Dark shading marks areas outside radar coverage.</small>
-        </>
+            <small>heavy</small>
+          </span>
+          <span>
+            <b aria-hidden="true" />
+            <small>no coverage</small>
+          </span>
+          <a
+            href="https://www.rainviewer.com/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            RainViewer
+          </a>
+        </footer>
       )}
     </section>
   );
